@@ -14,6 +14,9 @@ add_moduledirs("tools/xmakescripts/modules")
 -- Load the build_rules file into the global scope.
 includes("tools/xmakescripts/rules/build_rules.lua")
 
+-- Load all custom tasks into the global scope.
+includes("tools/xmakescripts/tasks/**.lua")
+
 -- Generate the mode rules.
 local modes = generate_compilation_modes()
 
