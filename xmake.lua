@@ -15,6 +15,8 @@ add_moduledirs("tools/xmakescripts/modules")
 -- Load our rule files into the global scope.
 includes("tools/xmakescripts/rules/**.lua")
 
+add_plugindirs("tools/xmakescripts/plugins")
+
 -- Generate the mode rules.
 local modes = generate_compilation_modes()
 
