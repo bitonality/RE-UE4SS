@@ -34,9 +34,10 @@ jobs:
           xmake-version: latest
       - name: Calculate the CI job matrix
         run: |
-          MODES = xmake ci --dump=modes | jq -R
-          echo "jobs=$modes" >> $GITHUB_OUTPUT
+          $modes = (xmake ci --dump=modes) -replace '"', '\"'
+          echo "`"jobs=$modes`"" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         id: jobs
+        shell: powershell
   build:
     name: ${{ matrix.mode }}
     needs: [ calculate_matrix ]
