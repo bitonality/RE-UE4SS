@@ -34,7 +34,7 @@ jobs:
         with:
           xmake-version: latest
       - name: Calculate the CI job matrix
-        run: xmake ci --dump=modes >> $GITHUB_OUTPUT
+        run: echo "xmake ci --dump=modes" >> $GITHUB_OUTPUT
         id: jobs
   build:
     name: ${{ matrix.mode }}
