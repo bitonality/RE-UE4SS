@@ -18,7 +18,6 @@ jobs:
     runs-on: windows-2022
     outputs:
       jobs: ${{ steps.jobs.outputs.jobs }}
-      run_type: ${{ steps.jobs.outputs.run_type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +33,9 @@ jobs:
         with:
           xmake-version: latest
       - name: Calculate the CI job matrix
-        run: echo "xmake ci --dump=modes" >> $env:GITHUB_OUTPUT
+        run: |
+          MODES = xmake ci --dump=modes | jq -R
+          echo "jobs=$modes" >> $GITHUB_OUTPUT
         id: jobs
   build:
     name: ${{ matrix.mode }}
