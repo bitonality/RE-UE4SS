@@ -2,6 +2,10 @@ import("core.project.project")
 import("core.base.json")
 
 function main()
-    local jsonString = json.encode(project.modes())
+    local modes = {}
+    for _, mode in pairs(project.modes()) do
+        table.append(modes, {mode = mode})
+    end
+    local jsonString = json.encode(modes)
     io.write(jsonString)
 end
