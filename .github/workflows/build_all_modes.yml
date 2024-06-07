@@ -1,0 +1,81 @@
+name: 
+permissions:
+    contents: write
+    pull-requests: write # For adding comments to PR.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+        - 'main'
+    paths-ignore:
+        - 'README.md'
+        - 'docs/**'
+        - 'docs-export/**'
+
+jobs:
+  calculate_matrix:
+    name: Calculate job matrix
+    runs-on: windows-2022
+    outputs:
+      jobs: ${{ steps.jobs.outputs.jobs }}
+      run_type: ${{ steps.jobs.outputs.run_type }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # needed to get commits since last tag
+          token: ${{ secrets.UEPSEUDO_PAT }}
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+      - name: Calculate the CI job matrix
+        run: xmake ci --dump=modes >> $GITHUB_OUTPUT
+        id: jobs
+  build:
+    name: ${{ matrix.mode }}
+    needs: [ calculate_matrix ]
+    runs-on: windows-2022
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # needed to get commits since last tag
+          token: ${{ secrets.UEPSEUDO_PAT }}
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+      - name: Retrieve xmake Package Hash
+        id: packageskey
+        run: echo "hash=$(xmake l utils.ci.packageskey)" >> $GITHUB_OUTPUT
+      - name: Restore xmake Package Cache
+        id: xmake-package-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{env.APPLOCALDATA}}\.xmake\packages
+          key: ${{ runner.os }}-${{matrix.mode}}-${{steps.packageskey.outputs.hash}}
+      - name: Build
+        run: |
+          xmake f -m "${{matrix.mode}}" -y
+          xmake build
+      - name: Save Cache
+        id: cache-primes-save
+        uses: actions/cache/save@v4
+        with:
+          path: ${{env.APPLOCALDATA}}\.xmake\packages
+          key: ${{ steps.xmake-package-restore.outputs.cache-primary-key }}
+     
