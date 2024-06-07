@@ -61,7 +61,7 @@ jobs:
           xmake-version: latest
       - name: Retrieve xmake Package Hash
         id: packageskey
-        run: echo "hash=$(xmake l utils.ci.packageskey)" >> $GITHUB_OUTPUT
+        run: echo "hash=$(xmake l utils.ci.packageskey)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       - name: Restore xmake Package Cache
         id: xmake-package-restore
         uses: actions/cache/restore@v4
