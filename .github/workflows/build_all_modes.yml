@@ -44,8 +44,8 @@ jobs:
     name: ${{ matrix.mode }}
     needs: [ calculate_matrix ]
     runs-on: windows-2022
-    fail-fast: false
     strategy:
+      fail-fast: false
       matrix: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
     steps:
       - name: Get current date as package key
