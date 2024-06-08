@@ -62,10 +62,10 @@ jobs:
         run: echo "XMAKE_GLOBALDIR=${{ runner.workspace }}/xmake-global" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Install VS2022 BuildTools 17.9.7
         run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-        with:
-          toolset: "143"
+    #  - name: Setup MSVC
+    #    uses: ilammy/msvc-dev-cmd@v1.13.0
+    #    with:
+     #     toolset: "14.3"
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
@@ -88,7 +88,11 @@ jobs:
       - name: Configure xmake and install dependencies
         run: |
           cmake --version
+          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
+
           xmake config -vD -m "${{matrix.mode}}" -y
+        shell: powershell
       - name: Save cached xmake dependencies
         if: ${{ !steps.restore-depcache.outputs.cache-hit }}
         uses: actions/cache/save@v4
