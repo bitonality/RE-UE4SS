@@ -27,6 +27,8 @@ jobs:
           token: ${{ secrets.UEPSEUDO_PAT }}
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: "14.39"
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
