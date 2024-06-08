@@ -84,7 +84,9 @@ jobs:
           key: MSVC-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
     # Setup compilation mode and install project dependencies
       - name: Configure xmake and install dependencies
-        run: xmake config -vD -m "${{matrix.mode}}" -y
+        run: |
+          cmake --version
+          xmake config -vD -m "${{matrix.mode}}" -y
       - name: Save cached xmake dependencies
         if: ${{ !steps.restore-depcache.outputs.cache-hit }}
         uses: actions/cache/save@v4
