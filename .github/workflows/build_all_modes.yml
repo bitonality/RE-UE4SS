@@ -27,8 +27,6 @@ jobs:
           token: ${{ secrets.UEPSEUDO_PAT }}
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1.13.0
-        with:
-          toolset: "14.39"
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
@@ -65,8 +63,6 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1.13.0
-        with:
-          toolset: "14.39"
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
@@ -88,7 +84,7 @@ jobs:
           key: MSVC-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
     # Setup compilation mode and install project dependencies
       - name: Configure xmake and install dependencies
-        run: xmake config -m "${{matrix.mode}}" -y
+        run: xmake config -vD -m "${{matrix.mode}}" -y
       - name: Save cached xmake dependencies
         if: ${{ !steps.restore-depcache.outputs.cache-hit }}
         uses: actions/cache/save@v4
