@@ -106,8 +106,8 @@ jobs:
         run: |
           xmake build -y
           $ue4ss = ((xmake ci --dump=targets) | ConvertFrom-Json)
-          echo "target=$($modes.UE4SS.Target)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          echo "symbol=$($modes.UE4SS.Symbol)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          echo "target=$($ue4ss.UE4SS.Target)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          echo "symbol=$($ue4ss.UE4SS.Symbol)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         shell: powershell
       - name: Upload a Build Artifact
         id: upload-artifact
