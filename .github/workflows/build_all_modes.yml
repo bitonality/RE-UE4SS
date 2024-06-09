@@ -34,7 +34,7 @@ jobs:
       - name: Calculate the CI job matrix
         run: |
           $modes = (xmake ci --dump=modes) | ConvertTo-Json
-          echo "jobs=$($modes | jq -cn --argjson modes $modes '$modes')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          echo jobs=$modes >> $env:GITHUB_OUTPUT
         id: jobs
         shell: pwsh
   build:
