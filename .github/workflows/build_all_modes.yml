@@ -35,7 +35,7 @@ jobs:
       - name: Calculate the CI job matrix
         run: |
           $modes = (xmake ci --dump=modes) | ConvertTo-Json
-          echo "jobs=$($modes | jq -cn --argjson modes $modes '{mode: $modes}')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          echo "jobs=$($modes | jq -cn --argjson modes $modes '$modes')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         id: jobs
         shell: powershell
   build:
@@ -44,7 +44,8 @@ jobs:
     runs-on: windows-2022
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
+      matrix: 
+        mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
         include:
           - mode: "Game__Shipping__Win64"
             artifact: true
@@ -64,7 +65,7 @@ jobs:
           token: ${{ secrets.UEPSEUDO_PAT }}
           # Force xmake to a specific folder (for cache)
       - name: Set xmake env
-        run: echo "XMAKE_GLOBALDIR=${{ runner.workspace }}/xmake-global" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        run: echo "XMAKE_GLOBALDIR=${{ runner.tool_cache }}/xmake-global" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Install VS2022 BuildTools 17.9.7
         run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
       - name: Setup xmake
@@ -125,13 +126,13 @@ jobs:
         run: |
           echo "date=$([DateTime]::UtcNow.ToString('u').Replace('Z','UTC'))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - name: Find possible previous comment
-            if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
-            uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
-            id: findComment
-            with:
-              issue-number: ${{ github.event.number }}
-              comment-author: 'github-actions[bot]'
-              body-includes: '<!-- PR_ARTIFACT_${{matrix.mode}} -->'
+        if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
+        id: findComment
+        with:
+          issue-number: ${{ github.event.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- PR_ARTIFACT_${{matrix.mode}} -->'
       - name: Update comment
         if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043

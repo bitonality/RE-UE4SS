@@ -1,160 +1,134 @@
-name: Build All Modes
+name: Docs CI
 permissions:
     contents: write
     pull-requests: write # For adding comments to PR.
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
         - 'main'
-    paths-ignore:
+    paths:
+        - '.github/actions/docs_build/**'
         - 'README.md'
         - 'docs/**'
         - 'docs-export/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '.github/actions/docs_build/**'
+      - 'README.md'
+      - 'docs/**'
+      - 'docs-export/**'
 
 jobs:
-  calculate_matrix:
-    name: Calculate job matrix
-    runs-on: windows-2022
+  poothon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      # Update output format to enable automatic inline annotations.
+      - name: Run Ruff
+        run: ruff check --output-format=github .
+  skip-lint:
+    runs-on: ubuntu-latest
     outputs:
-      jobs: ${{ steps.jobs.outputs.jobs }}
+      should-lint: ${{ steps.nolint-pr-description.outputs.should-lint }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0 # needed to get commits since last tag
-          token: ${{ secrets.UEPSEUDO_PAT }}
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1.13.0
+    - name: Validate PR Description
+      if: ${{ startsWith(github.ref, 'refs/pull/') }}
+      id: nolint-pr-description
+      run: |
+        # Fetch PR description using jq
+        PR_DESCRIPTION=$(jq -r ".pull_request.body" "$GITHUB_EVENT_PATH")
+        KEYWORD="[nolint]"
 
-      - name: Setup xmake
-        uses: xmake-io/github-action-setup-xmake@v1
-        with:
-          xmake-version: latest
-      - name: Calculate the CI job matrix
-        run: |
-          $modes = (xmake ci --dump=modes) | ConvertTo-Json
-          echo "jobs=$($modes | jq -cn --argjson modes $modes '{mode: $modes}')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        id: jobs
-        shell: powershell
+        # Check for the required keyword in the PR description
+        if [[ $PR_DESCRIPTION != *"$KEYWORD"* ]]; then
+          echo "should-lint=yes" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::Skipping linting due to [nolint] in PR description."
+        fi
+  lint:
+    runs-on: ubuntu-latest
+    needs: ['skip-lint']
+    if: ${{ needs.skip-lint.outputs.should-lint }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: tj-actions/changed-files@v44
+      id: changed-files
+      with:
+        files: '**/*.md'
+        separator: ","
+    - uses: DavidAnson/markdownlint-cli2-action@v16
+      id: markdown-lint
+      if: steps.changed-files.outputs.any_changed == 'true'
+      with:
+        globs: ${{ steps.changed-files.outputs.all_changed_files }}
+        separator: ","
+    - name: Find possible previous comment
+      if: ${{ failure() && steps.markdown-lint.conclusion == 'failure'}}
+      uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
+      id: findComment
+      with:
+        issue-number: ${{ github.event.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: '<!-- MARKDOWN_LINTER_WARNING -->'
+    - name: Update comment
+      if: ${{ failure() && steps.markdown-lint.conclusion == 'failure'}}
+      uses: peter-evans/create-or-update-commentcreate-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
+      with:
+        comment-id: ${{ steps.findComment.outputs.comment-id }}
+        issue-number: ${{ github.event.number }}
+        body: |
+          <!-- MARKDOWN_LINTER_WARNING -->
+          # New Linting Checks
+          We've detected that linting on an edited .md file has failed. We suggest that you fix any linting errors in newly added markdown lines.
+          You may also opt to resolve all linting errors in this file to help us avoid a massive lint commit on the entire repository.
+        edit-mode: replace
   build:
-    name: ${{ matrix.mode }}
-    needs: [ calculate_matrix ]
-    runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
-        include:
-          - mode: "Game__Shipping__Win64"
-            artifact: true
-          - mode: "Game__Debug__Win64"
-            artifact: true
+    if: ${{ always() }}
+    concurrency: ci-${{ github.ref }}
+    runs-on: ubuntu-latest
     steps:
-      - name: Get current date as package key
-        id: cache_key
-        run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout input ref
+        uses: actions/checkout@v3
         with:
-          submodules: recursive
-          fetch-depth: 0 # needed to get commits since last tag
-          token: ${{ secrets.UEPSEUDO_PAT }}
-          # Force xmake to a specific folder (for cache)
-      - name: Set xmake env
-        run: echo "XMAKE_GLOBALDIR=${{ runner.workspace }}/xmake-global" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Install VS2022 BuildTools 17.9.7
-        run: choco install -y visualstudio2022buildtools --version=117.9.7.0 --params "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --installChannelUri https://aka.ms/vs/17/release/180911598_-255012421/channel"
-      - name: Setup xmake
-        uses: xmake-io/github-action-setup-xmake@v1
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+      - name: Build md book
+        id: build-docs
+        uses: ./.github/actions/docs_build
         with:
-          xmake-version: latest
-          actions-cache-folder: .xmake-cache-W${{ steps.cache_key.outputs.key }}
-      - name: Update xmake repository
-        run: xmake repo --update
-            # Fetch xmake dephash
-      - name: Retrieve dependencies hash
-        id: dep_hash
-        run: echo "hash=$(xmake l utils.ci.packageskey)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-      # Cache xmake dependencies
-      - name: Restore cached xmake dependencies
-        id: restore-depcache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.XMAKE_GLOBALDIR }}\.xmake\packages
-          key: MSVC-${{ matrix.mode }}-${{ steps.dep_hash.outputs.hash }}-W${{ steps.cache_key.outputs.key }}
-    # Setup compilation mode and install project dependencies 
-      - name: Configure xmake and install dependencies
-        run: |
-          cmake --version
-          Import-Module 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
-          Enter-VsDevShell -VsInstallPath 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools' -DevCmdArguments '-arch=x64 -host_arch=x64'
-
-          xmake config -vD -m "${{matrix.mode}}" -y
-        shell: powershell
-      - name: Save cached xmake dependencies
-        if: ${{ !steps.restore-depcache.outputs.cache-hit }}
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.XMAKE_GLOBALDIR }}/.xmake/packages
-          key: ${{ steps.restore-depcache.outputs.cache-primary-key }}
-      - name: Build
-        id: build
-        run: |
-          xmake build -y
-          $ue4ss = ((xmake ci --dump=targets) | ConvertFrom-Json)
-          echo "target=$($modes.UE4SS.Target)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          echo "symbol=$($modes.UE4SS.Symbol)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-      - name: Upload a Build Artifact
-        id: upload-artifact
-        uses: actions/upload-artifact@v4.3.3
-        if: ${{matrix.artifact == true}}
-        with:
-          name: artifact-${{matrix.mode}}
-          path: |
-                ${{ steps.build.outputs.target }}
-                ${{ steps.build.outputs.symbol }}
-          retention-days: 14
-          overwrite: true
-      - name: Get Date
-        id: get-date
-        if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
-        shell: powershell
-        run: |
-          echo "date=$([DateTime]::UtcNow.ToString('u').Replace('Z','UTC'))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-      - name: Find possible previous comment
-            if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
-            uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
-            id: findComment
-            with:
-              issue-number: ${{ github.event.number }}
-              comment-author: 'github-actions[bot]'
-              body-includes: '<!-- PR_ARTIFACT_${{matrix.mode}} -->'
-      - name: Update comment
-        if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
-        with:
-          comment-id: ${{ steps.findComment.outputs.comment-id }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            <!-- PR_ARTIFACT_${{matrix.mode}} -->
-            ![badge]
-            
-            You can find a link to your latest successful build below.
-            
-            | Name     | Link                    |
-            | -------- | ----------------------- |
-            | Commit   | ${{ env.HEAD_SHA }}     |
-            | Logs     | ${{ env.JOB_PATH }}     |
-            | Download | ${{ env.ARTIFACT_URL }} |
-            | Time     | ${{ env.DATE }}         |
-            
-            [badge]: https://img.shields.io/badge/Build_Success!-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMjEuMDMgNS43MmEuNzUuNzUgMCAwIDEgMCAxLjA2bC0xMS41IDExLjVhLjc0Ny43NDcgMCAwIDEtMS4wNzItLjAxMmwtNS41LTUuNzVhLjc1Ljc1IDAgMSAxIDEuMDg0LTEuMDM2bDQuOTcgNS4xOTVMMTkuOTcgNS43MmEuNzUuNzUgMCAwIDEgMS4wNiAwWiI+PC9wYXRoPjwvc3ZnPg==
-          edit-mode: replace
+          header-type: "branch"
+          doc-name: "${{ env.HEADER_TYPE }}"
+          book-dir: "docs-export"
+          redirect-url: "docs.ue4ss.com"
         env:
-          JOB_PATH: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.job}}"
-          ARTIFACT_URL: "${{ github.server_url }}/${{ github.repository }}/actions/artifacts/${{steps.upload-artifact.outputs.artifact-id }}"
-          HEAD_SHA: "${{ github.head_ref }}"
-          DATE: "${{ steps.get-date.outputs.date}}"
+          HEADER_TYPE: ${{ startsWith(github.ref, 'refs/pull/') && github.ref || 'dev'}}
+      - uses: actions/upload-artifact@v4
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        with:
+          name: ${{ github.sha }}
+          path: ${{ steps.build-docs.outputs.output-dir }}
+          compression-level: 5
+      - name: Deploy to GitHub Pages
+        if: ${{github.ref == 'refs/heads/main'}}
+        uses: JamesIves/github-pages-deploy-action@v4.6.1
+        with:
+          folder: ~${{ steps.build-docs.outputs.output-dir }}
+          branch: gh-pages
+          target-folder: dev
+          clean: true
+
+        
+                    
