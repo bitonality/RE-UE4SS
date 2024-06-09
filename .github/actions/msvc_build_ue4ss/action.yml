@@ -31,13 +31,7 @@ runs:
         run: echo "key=$(date +'%W')" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0 # needed to get commits since last tag
-          token: ${{ secrets.UEPSEUDO_PAT }}
-          ref: ${{inputs.commit-sha}}
+
 
       # Force xmake to a specific folder (for cache)
       - name: Set xmake env
