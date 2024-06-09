@@ -54,12 +54,15 @@ jobs:
       - name: Build And Upload UE4SS
         id: build-ue4ss
         uses: bitonality/RE-UE4SS/.github/workflows/build_ue4ss.yml@main
+        secrets: inherit
         with:
           build-mode: ${{ matrix.mode }}
           commit-sha: ${{ github.sha }}
           should-upload-artifact: ${{matrix.artifact == true}}
           artifact-list: '{"UE4SS": ["target", "symbol"]}'
           artifact-retention-days: 14
+        
+
       - name: Get Date
         id: get-date
         if: ${{ matrix.artifact == true && startsWith(github.ref, 'refs/pull/')}}
