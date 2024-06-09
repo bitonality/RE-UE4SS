@@ -30,11 +30,12 @@ on:
     outputs:
       artifact-url:
         description: "Directory where documents are generated."
-        value: ${{ steps.upload-artifact.outputs.artifact-url }}
-  
+        value: ${{ jobs.build.outputs.artifact-url }}
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      artifact-url: ${{ steps.upload-artifact.outputs.artifact-url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
