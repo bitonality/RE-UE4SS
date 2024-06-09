@@ -33,8 +33,8 @@ jobs:
           xmake-version: latest
       - name: Calculate the CI job matrix
         run: |
-          $modes = (xmake ci --dump=modes) | ConvertTo-Json
-          echo jobs=$modes >> $env:GITHUB_OUTPUT
+          $modes = (xmake ci --dump=modes)
+          echo "jobs=$modes" >> $env:GITHUB_OUTPUT
         id: jobs
         shell: pwsh
   build:
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: 
-        mode: ${{ fromJSON(toJSON(needs.calculate_matrix.outputs.jobs)) }}
+        mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
         include:
           - mode: "Game__Shipping__Win64"
             artifact: true
