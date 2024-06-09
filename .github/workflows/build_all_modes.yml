@@ -36,7 +36,7 @@ jobs:
           $modes = (xmake ci --dump=modes) | ConvertTo-Json
           echo "jobs=$($modes | jq -cn --argjson modes $modes '$modes')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         id: jobs
-        shell: powershell
+        shell: pwsh
   build:
     name: ${{ matrix.mode }}
     needs: [ calculate_matrix ]
