@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: 
-        mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
+        mode: ${{ fromJSON(toJSON(needs.calculate_matrix.outputs.jobs)) }}
         include:
           - mode: "Game__Shipping__Win64"
             artifact: true
