@@ -1,5 +1,6 @@
 name: Build All Modes
 permissions:
+    contents: write
     pull-requests: write # For adding comments to PR.
 on:
   pull_request:
