@@ -106,7 +106,7 @@ jobs:
               let artifactNameComponents = artifact.name.split('-');
               let artifactName = "Build-Success";
               if(artifactNameComponents.length > 1) {
-                artifactName = artifactNameComponents.slice(0,1).join('-')
+                artifactName = artifactNameComponents.slice(0,1).join('_')
               }
               artifactReport += `![status badge](https://img.shields.io/badge/${artifactName}-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MDAiIGhlaWdodD0iODAwIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHBhdGggZD0iTTE5MiA5NmE2NCA2NCAwIDEgMC05NiA1NS4zOXYyMDkuMjJhNjQgNjQgMCAxIDAgNjQgMFYxNTEuMzlBNjQgNjQgMCAwIDAgMTkyIDk2Wm0tNjQtMzJhMzIgMzIgMCAxIDEtMzIgMzIgMzIgMzIgMCAwIDEgMzItMzJabTAgMzg0YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWk00MTYgMzYwLjYxVjE1NmE5Mi4xIDkyLjEgMCAwIDAtOTItOTJoLTIwVjMyYTE2IDE2IDAgMCAwLTI3LjMxLTExLjMxbC02NCA2NGExNiAxNiAwIDAgMCAwIDIyLjYybDY0IDY0QTE2IDE2IDAgMCAwIDMwNCAxNjB2LTMyaDIwYTI4IDI4IDAgMCAxIDI4IDI4djIwNC42MWE2NCA2NCAwIDEgMCA2NCAwWk0zODQgNDQ4YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWiIvPjwvc3ZnPg==)\n`;
               artifactReport += "|Name|Information|\n|---|---|\n";
