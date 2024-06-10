@@ -47,7 +47,7 @@ jobs:
 
   calculate-artifacts:    
     name: Calculate which modes should upload artifacts
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       additional_artifacts: ${{ steps.additional-artifacts.outputs.additional_artifacts }} # JSON list of all modes.
     env:
