@@ -82,7 +82,7 @@ jobs:
       name: Finalize github matrix
       needs: [calculate-artifacts, calculate_matrix]
       env:
-        ARTIFACTS: ${{ needs.calculate-artifacts.outputs.additional-artifacts }}
+        ARTIFACTS: ${{ needs.calculate-artifacts.outputs.additional_artifacts }}
         MODES: ${{ needs.calculate_matrix.outputs.jobs }}
       runs-on: ubuntu-latest
       outputs:
