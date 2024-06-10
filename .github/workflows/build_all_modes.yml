@@ -47,65 +47,39 @@ jobs:
 
   calculate-artifacts:    
     name: Calculate which modes should upload artifacts
+    needs: [calculate_matrix]
     runs-on: windows-latest
     outputs:
-      additional_artifacts: ${{ steps.additional-artifacts.outputs.additional_artifacts }} # JSON list of all modes.
+      matrix: ${{ steps.additional-artifacts.outputs.matrix }} # JSON list of all modes.
     env:
-      DEFAULT_MODES: '[{"artifact":true,"mode":"Game__Debug__Win64"},{"artifact":true,"mode":"Game__Shipping__Win64"}]'
+      DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
     steps:
     - name: Dump GitHub context
       id: additional-artifacts
       shell: pwsh
       run: >
-        $github_event = Get-Content -Raw "$env:GITHUB_EVENT_PATH" | ConvertFrom-Json
+        $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$GITHUB_EVENT_PATH"
 
-        $pr_body = $github_event.pull_request.body
+        
+        $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .modes[], "artifact": false}]'
 
-        $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant'
+        $mergedModes = jq -rcn '[($arr1[] | ascii_upcase)] + [($arr2[] | ascii_upcase)] | unique' --argjson arr1 "$env:DEFAULT_MODES" --argjson arr2 "$modes"
+        
+        $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
+      
 
-        $pattern = "\[artifact=(?'mode'.*?)\]"
-
-        $matched_modes = [regex]::Match($pr_body, $pattern, $options)
-
-        $modes = ($env:DEFAULT_MODES | ConvertFrom-Json)
-
-        $matched_modes | % {
-          $include = @{}
-          $include['mode'] = ($_.Groups['mode'].value)
-          $include['artifact'] = $true 
-          $modes += ($_.Groups['mode'].value) 
-        }
-
-        echo "additional_artifacts=$(($modes | ConvertTo-JSON -Compress))" >> $env:GITHUB_OUTPUT
-
-  finalize-matrix:
-      name: Finalize github matrix
-      needs: [calculate-artifacts, calculate_matrix]
-      env:
-        ARTIFACTS: ${{ needs.calculate-artifacts.outputs.additional_artifacts }}
-        MODES: ${{ needs.calculate_matrix.outputs.jobs }}
-      runs-on: ubuntu-latest
-      outputs:
-        finalized-matrix: ${{ steps.finalize-matrix.outputs.finalized-matrix }} # JSON list of all modes.
-      steps:
-      - name: Print context
-        id: finalize-matrix
-        shell: pwsh
-        run: |
-          echo ("$env:MODES" | ConvertTo-Json)
-          echo ("$env:ARTIFACTS" | ConvertTo-Json)
+        echo 'matrix=$($modes | jq -rc)'' >> $env:GITHUB_OUTPUT
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
     name: ${{ matrix.mode }}
-    needs: [ finalize-matrix ] # Ensure `calculate_matrix` has completed before we launch this job.
+    needs: [ calculate-artifacts ] # Ensure `calculate_matrix` has completed before we launch this job.
     strategy:
       fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
-        mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
         # Add `artifact=true` to specific modes.
         # This is how we can specify which modes should upload their artifacts. 
-        include: ${{ fromJSON(needs.calculate-artifacts.outputs.additional_artifacts)}}
+        include: ${{ fromJSON(needs.calculate-artifacts.outputs.matrix)}}
     # Run our reusable workflow for each mode in our matrix.
     uses: bitonality/RE-UE4SS/.github/workflows/build_ue4ss.yml@main
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
