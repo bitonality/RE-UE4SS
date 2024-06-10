@@ -78,12 +78,27 @@ jobs:
 
         echo "additional_artifacts=$(($modes | ConvertTo-JSON -Compress))" >> $env:GITHUB_OUTPUT
 
-
+  finalize-matrix:
+      name: Finalize github matrix
+      needs: [calculate-artifacts, calculate_matrix]
+      env:
+        ARTIFACTS: ${{ needs.calculate-artifacts.outputs.additional-artifacts }}
+        MODES: ${{ needs.calculate_matrix.outputs.jobs }}
+      runs-on: ubuntu-latest
+      outputs:
+        finalized-matrix: ${{ steps.finalize-matrix.outputs.finalized-matrix }} # JSON list of all modes.
+      steps:
+      - name: Print context
+        id: finalize-matrix
+        shell: pwsh
+        run: |
+          echo ("$env:MODES" | ConvertTo-Json)
+          echo ("$env:ARTIFACTS" | ConvertTo-Json)
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
     name: ${{ matrix.mode }}
-    needs: [ calculate_matrix, calculate-artifacts] # Ensure `calculate_matrix` has completed before we launch this job.
+    needs: [ finalize-matrix ] # Ensure `calculate_matrix` has completed before we launch this job.
     strategy:
       fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
