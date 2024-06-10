@@ -56,13 +56,15 @@ jobs:
       id: additional-artifacts
       shell: pwsh
       run: >
-        $input = 
+        $github_event = Get-Content -Raw "$env:GITHUB_EVENT_PATH" | ConvertFrom-Json
+
+        $pr_body = $github_event.pull_request.body
 
         $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant'
 
         $pattern = "\[artifact=(?'mode'.*?)\]"
 
-        $matched_modes = [regex]::Match($input, $pattern, $options)
+        $matched_modes = [regex]::Match($pr_body, $pattern, $options)
 
         $modes = ($env:DEFAULT_MODES | ConvertFrom-Json)
 
@@ -107,7 +109,7 @@ jobs:
   report-artifacts:
     name: "Report results to pull requests"
     runs-on: ubuntu-latest
-    needs: [ calculate_matrix, build ]
+    needs: [ build ]
     steps:
       - uses: actions/github-script@v7
         id: generate-markdown
