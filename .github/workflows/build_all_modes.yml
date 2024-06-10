@@ -1,6 +1,5 @@
 name: Build All Modes
 permissions:
-    contents: write
     pull-requests: write # For adding comments to PR.
 on:
   pull_request:
@@ -11,57 +10,106 @@ on:
         - 'docs/**'
         - 'docs-export/**'
 
+# Ensure that rapid pushes to the pull request doesn't trigger this workflow multiple times.
+# We only care about executing this workflow for that 'latest' commit on a PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Dynamically calculate which modes to build.
   calculate_matrix:
     name: Calculate job matrix
     runs-on: windows-2022
     outputs:
-      jobs: ${{ steps.jobs.outputs.jobs }}
+      jobs: ${{ steps.jobs.outputs.jobs }} # JSON list of all modes.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
-          fetch-depth: 0 # needed to get commits since last tag
+          submodules: recursive # Clone the submodule so we can query xmake on the entire project.
           token: ${{ secrets.UEPSEUDO_PAT }}
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1.13.0
 
+        # Build modes are supplied by xmake, so we have to download and setup the xmake environment.
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: latest
+          xmake-version: "2.9.2"
+
+        # `xmake ci --dump=modes` returns a JSON array of all UE4SS modes that xmake knows how to build.
       - name: Calculate the CI job matrix
+        id: jobs
+        shell: pwsh
         run: |
           $modes = (xmake ci --dump=modes)
           echo "jobs=$modes" >> $env:GITHUB_OUTPUT
-        id: jobs
-        shell: pwsh
+
+  calculate-artifacts:    
+    name: Calculate which modes should upload artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      additional_artifacts: ${{ steps.additional-artifacts.outputs.additional_artifacts }} # JSON list of all modes.
+    env:
+      DEFAULT_MODES: '[{"artifact":true,"mode":"Game__Debug__Win64"},{"artifact":true,"mode":"Game__Shipping__Win64"}]'
+    steps:
+    - name: Dump GitHub context
+      id: additional-artifacts
+      shell: pwsh
+      run: >
+        $github_event = Get-Content -Raw "$env:GITHUB_EVENT_PATH" | ConvertFrom-Json
+
+        $pr_body = $github_event.pull_request.body
+
+        $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant'
+
+        $pattern = "\[artifact=(?'mode'.*?)\]"
+
+        $matched_modes = [regex]::Match($pr_body, $pattern, $options)
+
+        $modes = ($env:DEFAULT_MODES | ConvertFrom-Json)
+
+        $matched_modes | % {
+          $include = @{}
+          $include['mode'] = ($_.Groups['mode'].value)
+          $include['artifact'] = $true 
+          $modes += ($_.Groups['mode'].value) 
+        }
+
+        echo "additional_artifacts=$(($modes | ConvertTo-JSON -Compress))" >> $env:GITHUB_OUTPUT
+
+
+
+  # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
     name: ${{ matrix.mode }}
-    needs: [ calculate_matrix ]
+    needs: [ calculate_matrix, calculate-artifacts] # Ensure `calculate_matrix` has completed before we launch this job.
     strategy:
-      fail-fast: false
+      fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
         mode: ${{ fromJSON(needs.calculate_matrix.outputs.jobs) }}
-        include:
-          - mode: "Game__Shipping__Win64"
-            artifact: true
-          - mode: "Game__Debug__Win64"
-            artifact: true
+        # Add `artifact=true` to specific modes.
+        # This is how we can specify which modes should upload their artifacts. 
+        include: ${{ fromJSON(needs.calculate-artifacts.outputs.additional_artifacts)}}
+    # Run our reusable workflow for each mode in our matrix.
     uses: bitonality/RE-UE4SS/.github/workflows/build_ue4ss.yml@main
-    secrets: inherit
+    secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
     with:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }}
-      should-upload-artifact: ${{matrix.artifact == true}}
+      should-upload-artifact: ${{ matrix.artifact == true }}
+      # JSON that declares what files to upload for specific xmake targets.
+      # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
+      # This specifies that the `UE4SS` target should upload its target file and symbol file.
+      # Ex. UE4SS.dll + UE4SS.pdb
       artifact-list: '{"UE4SS": ["target", "symbol"]}'
       artifact-retention-days: 14
 
+  # This job fetches artifacts created in previous jobs.
+  # It then reports these artifacts to the pull request that triggered this workflow.
   report-artifacts:
-    name: "Report uploaded artifacts to pull requests"
+    name: "Report results to pull requests"
     runs-on: ubuntu-latest
-    needs: [ calculate_matrix, build ]
+    needs: [ build ]
     steps:
       - uses: actions/github-script@v7
         id: generate-markdown
@@ -108,8 +156,9 @@ jobs:
               if(artifactNameComponents.length > 1) {
                 artifactName = artifactNameComponents.slice(0,2).join('_')
               }
-              artifactReport += "<details><summary> Build Details </summary>"
+
               artifactReport += `[![status badge](https://img.shields.io/badge/${artifactName}-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MDAiIGhlaWdodD0iODAwIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHBhdGggZD0iTTE5MiA5NmE2NCA2NCAwIDEgMC05NiA1NS4zOXYyMDkuMjJhNjQgNjQgMCAxIDAgNjQgMFYxNTEuMzlBNjQgNjQgMCAwIDAgMTkyIDk2Wm0tNjQtMzJhMzIgMzIgMCAxIDEtMzIgMzIgMzIgMzIgMCAwIDEgMzItMzJabTAgMzg0YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWk00MTYgMzYwLjYxVjE1NmE5Mi4xIDkyLjEgMCAwIDAtOTItOTJoLTIwVjMyYTE2IDE2IDAgMCAwLTI3LjMxLTExLjMxbC02NCA2NGExNiAxNiAwIDAgMCAwIDIyLjYybDY0IDY0QTE2IDE2IDAgMCAwIDMwNCAxNjB2LTMyaDIwYTI4IDI4IDAgMCAxIDI4IDI4djIwNC42MWE2NCA2NCAwIDEgMCA2NCAwWk0zODQgNDQ4YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWiIvPjwvc3ZnPg==)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+              artifactReport += "<details><summary> Build Details </summary>"
               artifactReport += "|Name|Information|\n|---|---|\n";
               artifactReport += "|PR Commit | ${{github.event.pull_request.head.sha}} |\n";
               artifactReport += "| Merge Commit | ${{github.sha}} |\n";
