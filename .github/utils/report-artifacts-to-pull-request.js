@@ -1,7 +1,7 @@
 
 // @ts-check
 /** @param {import('github-script').AsyncFunctionArguments} AsyncFunctionArguments */
-export default async ({github, context}, handlebars) => {
+module.exports = async ({github, context}, handlebars) => {
     const fs = require('fs');
     const utils = require("./utils.js");
       const opts = await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
@@ -43,7 +43,7 @@ export default async ({github, context}, handlebars) => {
           return;
         }
 
-        var template = handlebars.compile(data);
+        var template = handlebars.compile(JSON.stringify(data));
         renderedResult = template(templateData);
       });
       
