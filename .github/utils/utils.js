@@ -20,5 +20,11 @@ module.exports = {
       },
     humanReadableDate: function (date) {
         return dateTimeFormat.format(date);
+    },
+    getCustomAttributesFromMarkdown: function(attributeName, markdownBody) {
+        const re = new RegExp(`\\[${attributeName}=(.*?)\\]`,"gi");
+        console.log(re);
+        let matches = markdownBody.matchAll(re);
+        return Array.from(matches, (m) => m[1]);
     }
 };
