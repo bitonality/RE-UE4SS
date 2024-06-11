@@ -60,13 +60,13 @@ jobs:
       run: >
         $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
 
-        
+        echo $modes
         $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
-
+        echo $all_modes
         $mergedModes = jq -rcn '[($arr1[] | ascii_upcase)] + [($arr2[] | ascii_upcase)] | unique' --argjson arr1 "$env:DEFAULT_MODES" --argjson arr2 "$modes"
-        
+        echo $mergedModes
         $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
-      
+        echo $include
 
         echo 'matrix=$($modes | jq -rc)' >> $env:GITHUB_OUTPUT
 
