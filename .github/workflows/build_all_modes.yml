@@ -109,6 +109,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build ]
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      - run: npm install handlebars
         # We use GitHub's inline script step instead of defining our own JS/TypeScript action.
         # This avoids us having to take NPM dependencies in our repo.
         # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
@@ -118,64 +123,9 @@ jobs:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
-            let humanReadableSize = function(bytes, decimals) {
-              if(bytes == 0) return '0 Bytes';
-              var k = 1024,
-                  dm = decimals || 2,
-                  sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-                  i = Math.floor(Math.log(bytes) / Math.log(k));
-              return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-            }
-
-            let dateTimeFormat = new Intl.DateTimeFormat('default', {
-                month: 'short',
-                day: 'numeric',
-                year: '2-digit',
-                hour: 'numeric',
-                minute: 'numeric',
-                second: 'numeric',
-                timeZone: 'utc',
-                timeZoneName: 'short',
-              });
-
-            const opts = await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: ${{github.run_id}}
-            });
-
-            const artifacts = await github.paginate(opts);
-          
-
-            let artifactReport = "";
-
-            // Build markdown to report to the pull request.
-
-            for (const artifact of artifacts) {
-              let artifactNameComponents = artifact.name.split('-');
-              let artifactName = "Build-Success"; // Default name to pass to shields.io.
-              if(artifactNameComponents.length > 1) {
-                // Attempt to simplify the artifact name for a prettier status badge.
-                // Ex. turn 'MSVC-Game__Shipping__Win64-SHA' into 'MSVC_Game__Shipping__Win64'.
-                // 'MSVC_Game__Shipping__Win64' will then be rendered as 'MSVC | Game_Shipping_Win64' in the shields.io badge.
-                artifactName = artifactNameComponents.slice(0,2).join('_');
-              }
-
-              artifactReport += `[![status badge](https://img.shields.io/badge/${artifactName}-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MDAiIGhlaWdodD0iODAwIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHBhdGggZD0iTTE5MiA5NmE2NCA2NCAwIDEgMC05NiA1NS4zOXYyMDkuMjJhNjQgNjQgMCAxIDAgNjQgMFYxNTEuMzlBNjQgNjQgMCAwIDAgMTkyIDk2Wm0tNjQtMzJhMzIgMzIgMCAxIDEtMzIgMzIgMzIgMzIgMCAwIDEgMzItMzJabTAgMzg0YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWk00MTYgMzYwLjYxVjE1NmE5Mi4xIDkyLjEgMCAwIDAtOTItOTJoLTIwVjMyYTE2IDE2IDAgMCAwLTI3LjMxLTExLjMxbC02NCA2NGExNiAxNiAwIDAgMCAwIDIyLjYybDY0IDY0QTE2IDE2IDAgMCAwIDMwNCAxNjB2LTMyaDIwYTI4IDI4IDAgMCAxIDI4IDI4djIwNC42MWE2NCA2NCAwIDEgMCA2NCAwWk0zODQgNDQ4YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWiIvPjwvc3ZnPg==)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
-              artifactReport += "<details><summary> Build Details </summary>\n\n"
-              artifactReport += "|Name|Information|\n|---|---|\n";
-              artifactReport += "|PR Commit | ${{github.event.pull_request.head.sha}} |\n";
-              artifactReport += "| Merge Commit | ${{github.sha}} |\n";
-              artifactReport += "| Logs | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |\n";
-              artifactReport += `| Download Archive | ${artifact.url} |\n`;
-              artifactReport += `| Size | ${humanReadableSize(artifact.size_in_bytes, 2)} |\n`;
-              artifactReport += `| Last Updated | ${dateTimeFormat.format(new Date(artifact.updated_at))} |\n`;
-              artifactReport += `| Expires At | ${dateTimeFormat.format(new Date(artifact.expires_at))} |\n`;
-
-              artifactReport += "</details>\n\n";
-            }
-
-            return artifactReport;
+            const script = require('./utils/report-artifacts-to-pull-request.js');
+            const handlebars = require('handlebars');
+            return await script({github, context}, handlebars);
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
