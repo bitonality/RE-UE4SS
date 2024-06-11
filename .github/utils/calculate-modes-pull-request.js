@@ -1,7 +1,8 @@
 
 // @ts-check
 /** @param {import('github-script').AsyncFunctionArguments} AsyncFunctionArguments */
-module.exports = async ({github, context}, handlebars) => {
+module.exports = async ({github, context}) => {
+    context.payload.pull_request?.body
     const fs = require('fs');
     const utils = require("./utils.js");
       const opts = await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
@@ -37,7 +38,7 @@ module.exports = async ({github, context}, handlebars) => {
       }
 
       let renderedResult = "";
-      fs.readFile('./.github/utils/markdown-templates/pull-request-artifact.hbs', 'utf8', (err, data) => {
+      fs.readFile('./markdown-templates/pull-request-artifact.hbs', 'utf8', (err, data) => {
         if (err) {
           console.error(err);
           return;
@@ -50,3 +51,5 @@ module.exports = async ({github, context}, handlebars) => {
 
       return renderedResult;
   }
+
+  
