@@ -61,7 +61,7 @@ jobs:
         $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
 
         
-        $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .modes[], "artifact": false}]'
+        $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
 
         $mergedModes = jq -rcn '[($arr1[] | ascii_upcase)] + [($arr2[] | ascii_upcase)] | unique' --argjson arr1 "$env:DEFAULT_MODES" --argjson arr2 "$modes"
         
