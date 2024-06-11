@@ -67,7 +67,7 @@ jobs:
         $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
         echo $include
 
-        echo 'matrix=$($modes | jq -rc)' >> $env:GITHUB_OUTPUT
+        echo 'matrix=$($include | jq -rc )' >> $env:GITHUB_OUTPUT
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
@@ -78,7 +78,7 @@ jobs:
       matrix: 
         # Add `artifact=true` to specific modes.
         # This is how we can specify which modes should upload their artifacts. 
-        include: ${{ fromJSON(needs.calculate-artifacts.outputs.matrix)}}
+        include: ${{ fromJSON(needs.calculate-artifacts.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
     uses: bitonality/RE-UE4SS/.github/workflows/build_ue4ss.yml@main
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
