@@ -123,7 +123,7 @@ jobs:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
-            const script = require('./utils/report-artifacts-to-pull-request.js');
+            const script = require('./.github/utils/report-artifacts-to-pull-request.js');
             const handlebars = require('handlebars');
             return await script({github, context}, handlebars);
 
