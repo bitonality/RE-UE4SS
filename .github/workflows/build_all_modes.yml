@@ -11,7 +11,7 @@ on:
         - 'docs/**'
         - 'docs-export/**'
 
-# Ensure that rapid pushes to the pull request doesn't trigger this workflow multiple times.
+# Ensure that rapid pushes to the pull request branch don't trigger this workflow multiple times.
 # We only care about executing this workflow for that 'latest' commit on a PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   # Dynamically calculate which modes to build.
-  calculate_matrix:
+  calculate-matrix:
     name: Calculate job matrix
     runs-on: windows-2022
     outputs:
@@ -45,42 +45,55 @@ jobs:
           $modes = (xmake ci --dump=modes)
           echo "jobs=$modes" >> $env:GITHUB_OUTPUT
 
+  # We now need to determine which modes should upload artifacts.
+  # This is the union of $env:DEFAULT_MODES and any [artifact=<mode>] strings in the pull request body.
   calculate-artifacts:    
-    name: Calculate which modes should upload artifacts
-    needs: [calculate_matrix]
+    name: Calculate requested artifacts
+    needs: [calculate-matrix] # Need list of possible modes first.
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.additional-artifacts.outputs.matrix }} # JSON list of all modes.
+      # Returns JSON list the form of [{"mode": "Game__Shipping__Win64", "artifact": true}, ...]
+      matrix: ${{ steps.additional-artifacts.outputs.matrix }}
     env:
+      # List of modes that will upload artifacts by default.
       DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
     steps:
-    - name: Dump GitHub context
+      # Retrieve the list of modes from the PR summary.
+      # Additional modes that should upload artifacts should be specified with the following in the PR summary.
+      # [artifact=Game__Shipping__Win64]
+      # We then merge all requested modes from the PR summary with DEFAULT_MODES environment variable in this job.
+      # Finally, we set `"artifact": true` for every mode in the in the merged modes.
+    - name: Merge mode matrix
       id: additional-artifacts
       shell: pwsh
       run: |
         $modes = jq -rc '[.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
-        $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
+        Write-Output "::notice::Additional artifacts requested from pull request summary: $modes"
+        $all_modes = '${{needs.calculate-matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
         $mergedModes = jq -rcn '[($arr1[] | ascii_upcase)] + [($arr2[] | ascii_upcase)] | unique' --argjson arr1 "$env:DEFAULT_MODES" --argjson arr2 "$modes"
         $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
+
+        Write-Output "::group::Finalized Matrix"
+        Write-Output $include
+        Write-Output "::endgroup::"
 
         echo "matrix=$($include | jq -rc '. | tojson')" >> $env:GITHUB_OUTPUT
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
     name: ${{ matrix.mode }}
-    needs: [ calculate-artifacts ] # Ensure `calculate_matrix` has completed before we launch this job.
+    needs: [ calculate-artifacts ] # Ensure the mode/artifact matrix has been generated before we launch this job.
     strategy:
       fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
-        # Add `artifact=true` to specific modes.
-        # This is how we can specify which modes should upload their artifacts. 
+        # Use our generated matrix to populate the `include` array.
         include: ${{ fromJSON(needs.calculate-artifacts.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
-    uses: bitonality/RE-UE4SS/.github/workflows/build_ue4ss.yml@main
+    uses: ./.github/workflows/build_ue4ss.yml
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
     with:
       build-mode: ${{ matrix.mode }}
-      commit-sha: ${{ github.sha }}
+      commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
       should-upload-artifact: ${{ matrix.artifact == true }}
       # JSON that declares what files to upload for specific xmake targets.
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
@@ -92,22 +105,19 @@ jobs:
   # This job fetches artifacts created in previous jobs.
   # It then reports these artifacts to the pull request that triggered this workflow.
   report-artifacts:
-    name: "Report results to pull requests"
+    name: "Report results to pull request"
     runs-on: ubuntu-latest
     needs: [ build ]
     steps:
+        # We use GitHub's inline script step instead of defining our own JS/TypeScript action.
+        # This avoids us having to take NPM dependencies in our repo.
+        # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
       - uses: actions/github-script@v7
         id: generate-markdown
         with:
           result-encoding: string
-          retries: 3
+          retries: 3 # Retry in case REST requests fail transitively.
           script: |
-            const opts = await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: ${{github.run_id}}
-            });
-
             let humanReadableSize = function(bytes, decimals) {
               if(bytes == 0) return '0 Bytes';
               var k = 1024,
@@ -128,18 +138,27 @@ jobs:
                 timeZoneName: 'short',
               });
 
+            const opts = await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{github.run_id}}
+            });
 
-
-            const artifacts = await github.paginate(opts)
+            const artifacts = await github.paginate(opts);
           
 
-            let artifactReport = ""
+            let artifactReport = "";
+
+            // Build markdown to report to the pull request.
 
             for (const artifact of artifacts) {
               let artifactNameComponents = artifact.name.split('-');
-              let artifactName = "Build-Success";
+              let artifactName = "Build-Success"; // Default name to pass to shields.io.
               if(artifactNameComponents.length > 1) {
-                artifactName = artifactNameComponents.slice(0,2).join('_')
+                // Attempt to simplify the artifact name for a prettier status badge.
+                // Ex. turn 'MSVC-Game__Shipping__Win64-SHA' into 'MSVC_Game__Shipping__Win64'.
+                // 'MSVC_Game__Shipping__Win64' will then be rendered as 'MSVC | Game_Shipping_Win64' in the shields.io badge.
+                artifactName = artifactNameComponents.slice(0,2).join('_');
               }
 
               artifactReport += `[![status badge](https://img.shields.io/badge/${artifactName}-0d1117?style=for-the-badge&labelColor=3fb950&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MDAiIGhlaWdodD0iODAwIiB2aWV3Qm94PSIwIDAgNTEyIDUxMiI+PHBhdGggZD0iTTE5MiA5NmE2NCA2NCAwIDEgMC05NiA1NS4zOXYyMDkuMjJhNjQgNjQgMCAxIDAgNjQgMFYxNTEuMzlBNjQgNjQgMCAwIDAgMTkyIDk2Wm0tNjQtMzJhMzIgMzIgMCAxIDEtMzIgMzIgMzIgMzIgMCAwIDEgMzItMzJabTAgMzg0YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWk00MTYgMzYwLjYxVjE1NmE5Mi4xIDkyLjEgMCAwIDAtOTItOTJoLTIwVjMyYTE2IDE2IDAgMCAwLTI3LjMxLTExLjMxbC02NCA2NGExNiAxNiAwIDAgMCAwIDIyLjYybDY0IDY0QTE2IDE2IDAgMCAwIDMwNCAxNjB2LTMyaDIwYTI4IDI4IDAgMCAxIDI4IDI4djIwNC42MWE2NCA2NCAwIDEgMCA2NCAwWk0zODQgNDQ4YTMyIDMyIDAgMSAxIDMyLTMyIDMyIDMyIDAgMCAxLTMyIDMyWiIvPjwvc3ZnPg==)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
@@ -158,6 +177,7 @@ jobs:
 
             return artifactReport;
 
+      # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
         if: ${{ startsWith(github.ref, 'refs/pull/') && steps.generate-markdown.outputs.result}}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
@@ -165,9 +185,10 @@ jobs:
         with:
           issue-number: ${{ github.event.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '<!-- PR_ARTIFACTS -->'
+          body-includes: '<!-- PR_ARTIFACTS -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
-        if: ${{ startsWith(github.ref, 'refs/pull/') && steps.generate-markdown.outputs.result}}
+        # Don't update the comment if we didn't generate any artifacts.
+        if: ${{ startsWith(github.ref, 'refs/pull/') && steps.generate-markdown.outputs.result }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
