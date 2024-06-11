@@ -23,7 +23,7 @@ jobs:
     name: Calculate job matrix
     runs-on: windows-2022
     outputs:
-      jobs: ${{ steps.jobs.outputs.jobs }} # JSON list of all modes.
+      matrix: ${{ steps.calculate-artifacts.outputs.result }} # JSON list of all modes.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,51 +43,29 @@ jobs:
         shell: pwsh
         run: |
           $modes = (xmake ci --dump=modes)
-          echo "jobs=$modes" >> $env:GITHUB_OUTPUT
-
-  # We now need to determine which modes should upload artifacts.
-  # This is the union of $env:DEFAULT_MODES and any [artifact=<mode>] strings in the pull request body.
-  calculate-artifacts:    
-    name: Calculate requested artifacts
-    needs: [calculate-matrix] # Need list of possible modes first.
-    runs-on: ubuntu-latest
-    outputs:
-      # Returns JSON list the form of [{"mode": "Game__Shipping__Win64", "artifact": true}, ...]
-      matrix: ${{ steps.additional-artifacts.outputs.matrix }}
-    env:
-      # List of modes that will upload artifacts by default.
-      DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
-    steps:
-      # Retrieve the list of modes from the PR summary.
-      # Additional modes that should upload artifacts should be specified with the following in the PR summary.
-      # [artifact=Game__Shipping__Win64]
-      # We then merge all requested modes from the PR summary with DEFAULT_MODES environment variable in this job.
-      # Finally, we set `"artifact": true` for every mode in the in the merged modes.
-    - name: Merge mode matrix
-      id: additional-artifacts
-      shell: pwsh
-      run: |
-        $modes = jq -rc '[.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
-        Write-Output "::notice::Additional artifacts requested from pull request summary: $modes"
-        $all_modes = '${{needs.calculate-matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
-        $mergedModes = jq -rcn '[($arr1[] | ascii_upcase)] + [($arr2[] | ascii_upcase)] | unique' --argjson arr1 "$env:DEFAULT_MODES" --argjson arr2 "$modes"
-        $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
-
-        Write-Output "::group::Finalized Matrix"
-        Write-Output $include
-        Write-Output "::endgroup::"
-
-        echo "matrix=$($include | jq -rc '. | tojson')" >> $env:GITHUB_OUTPUT
+          echo "all_modes=$modes" >> $env:GITHUB_OUTPUT
+      - uses: actions/github-script@v7
+        id: calculate-artifacts
+        env:
+          DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
+          ALL_MODES: ${{steps.jobs.outputs.all_modes}}
+        with:
+          result-encoding: string
+          retries: 3 # Retry in case REST requests fail transitively.
+          script: |
+            const { DEFAULT_MODES, ALL_MODES } = process.env
+            const script = require('./.github/utils/calculate-modes-pull-request.js');
+            return await script({context}, DEFAULT_MODES, ALL_MODES);
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
     name: ${{ matrix.mode }}
-    needs: [ calculate-artifacts ] # Ensure the mode/artifact matrix has been generated before we launch this job.
+    needs: [ calculate-matrix ] # Ensure the mode/artifact matrix has been generated before we launch this job.
     strategy:
       fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
         # Use our generated matrix to populate the `include` array.
-        include: ${{ fromJSON(needs.calculate-artifacts.outputs.matrix) }}
+        include: ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
     uses: ./.github/workflows/build_ue4ss.yml
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
