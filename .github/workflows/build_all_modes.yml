@@ -68,6 +68,7 @@ jobs:
         echo $include
 
         echo 'matrix=$($include | jq -rc ". | tojson")' >> $env:GITHUB_OUTPUT
+        echo $env:GITHUB_OUTPUT
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
