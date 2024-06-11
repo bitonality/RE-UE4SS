@@ -4,22 +4,12 @@
 module.exports = async ({context}, defaultModesAsString, allModesAsString) => {
     const utils = require("./utils.js");
 
-    let defaultModes = Array.from(JSON.parse(defaultModesAsString), (m) => m.toUpperCase());
-    let requestedModes = Array.from(utils.getCustomAttributesFromMarkdown("artifact", context.payload.pull_request?.body), (m) => m.toUpperCase());
-    let artifactModes = defaultModes.concat(requestedModes);
-    let allModes = JSON.parse(allModesAsString);
-
-    let modeSchema = new Array();
-    for (let i = 0; i < allModes.length; i++) {
-        let modeEntry = {};
-        modeEntry.mode = allModes[i];
-        if(artifactModes.includes(allModes[i].toUpperCase())) {
-            modeEntry.artifact = true;
-        } else {
-            modeEntry.artifact = false;
-        }
-        modeSchema.push(modeEntry);
-    }
+    const defaultModes = JSON.parse(defaultModesAsString).map(m => m.toUpperCase());
+    const requestedModes = utils.getCustomAttributesFromMarkdown("artifact", context.payload.pull_request?.body).map(m => m.toUpperCase());
+    const artifactModes = defaultModes.concat(requestedModes);
+    
+    const allModes = JSON.parse(allModesAsString);
+    const modeSchema = allModes.map(m => ({mode: m, artifact: artifactModes.includes(m.toUpperCase())}));
 
     return JSON.stringify(modeSchema)
   }
