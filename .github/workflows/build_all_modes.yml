@@ -57,9 +57,8 @@ jobs:
     - name: Dump GitHub context
       id: additional-artifacts
       shell: pwsh
-      run: >
+      run: |
         $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
-
         echo $modes
         $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .[], "artifact": false}]'
         echo $all_modes
