@@ -67,7 +67,7 @@ jobs:
         $include = "$all_modes" | jq 'map(select(IN((.mode | ascii_upcase); ($jq_modes[] | ascii_upcase))).artifact = true)' --argjson jq_modes "$mergedModes"
         echo $include
 
-        echo 'matrix=$($include | jq -rc )' >> $env:GITHUB_OUTPUT
+        echo 'matrix=$($include | jq -rc '. | tojson')' >> $env:GITHUB_OUTPUT
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
