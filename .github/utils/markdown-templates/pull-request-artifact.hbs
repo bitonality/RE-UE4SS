@@ -1,0 +1,15 @@
+{{#each artifact}}
+[![status badge](https://img.shields.io/badge/{{badgeName}}-green?style=for-the-badge&logo=githubactions&logoColor=white)]({{logsUrl}})
+
+<details><summary>Build Details</summary>
+|Name|Information|
+|PR Commit|{{prCommit}}|
+|Merge Commit|{{mergeCommit}}|
+|Logs|{{logsUrl}}|
+|Download Archive|{{artifactUrl}}|
+|Size|{{size}}|
+|Last Updated|{{lastUpdated}}|
+|Expires At|{{expiresAt}}|
+</details>
+
+{{/each}}
