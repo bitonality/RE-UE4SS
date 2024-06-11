@@ -58,7 +58,7 @@ jobs:
       id: additional-artifacts
       shell: pwsh
       run: >
-        $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$GITHUB_EVENT_PATH"
+        $modes = jq -rc '[.event.pull_request.body | capture("\\[artifact=(?<mode>.*?)\\]"; "gi") | .mode]' "$env:GITHUB_EVENT_PATH"
 
         
         $all_modes = '${{needs.calculate_matrix.outputs.jobs}}' | jq -rc '[{"mode": .modes[], "artifact": false}]'
