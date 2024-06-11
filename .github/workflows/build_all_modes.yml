@@ -21,7 +21,7 @@ jobs:
   # Dynamically calculate which modes to build.
   calculate-matrix:
     name: Calculate job matrix
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.calculate-artifacts.outputs.result }} # JSON list of all modes.
     steps:
@@ -48,7 +48,7 @@ jobs:
         id: calculate-artifacts
         env:
           DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
-          ALL_MODES: ${{steps.jobs.outputs.all_modes}}
+          ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
