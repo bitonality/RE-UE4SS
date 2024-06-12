@@ -56,9 +56,8 @@ module.exports = {
      * @returns {Object.<string, boolean>}
      */
     getChecklistFromMarkdown: function(checklistName, markdownBody) {
-        const checklistRegex = new RegExp(`<!--\\s*START_(.*)\\s*-->(.*)<!--\\s*END_\\1\\s*-->`, "gis");
+        const checklistRegex = new RegExp(`<!--\\s*START_${checklistName}\\s*-->(.*)<!--\\s*END_${checklistName}\\s*-->`, "gis");
         const checklist = markdownBody.matchAll(checklistRegex);
-        console.log(checklist[0]);
         const checklistItemRegex = new RegExp(`\\-\\s\\[(.{1})]\\s(.*)`, "gi");
         const checklistItems = checklist[0][1].matchAll(checklistItemRegex);
         return checklistItems.map(i => ({[i[2]]: i[1] == "x"}))
@@ -83,31 +82,17 @@ module.exports = {
         /** @type {string?} */
         let renderedResult = null;
         console.log("template path: %s", templatePath);
-        fs.readFile(
-            templatePath,
-            "utf8",
-            (err, data) => {
-                if (err) {
-                    console.log("ERROR");
-                    console.log(JSON.stringify(err));
-                    throw err;
-                }
-                console.log("data %s", data)
-                const template = handlebars.compile(data);
-                renderedResult = template(JSON.stringify(templateData));
-            }
-        );
+        const data = fs.readFileSync(templatePath, "utf8");
+        console.log("data %s", data)
+        const template = handlebars.compile(data);
+        renderedResult = template(JSON.stringify(templateData));
+            
+   
         console.log(renderedResult)
         if(renderedResult != null) {
             console.log(outputPath);
-            fs.writeFile(outputPath, renderedResult, err => {
-                if (err) {
-                    console.error(err);
-                } else {
-                    console.log(`Wrote PR comment body to ${outputPath}.`);
-                }
-            });
-              
+            fs.writeFileSync(outputPath, renderedResult);
+            console.log(`Wrote PR comment body to ${outputPath}.`);
         }
     }
 };
