@@ -82,26 +82,24 @@ module.exports = {
 
         /** @type {string?} */
         let renderedResult = null;
-
-        fs.readFileSync(
+        console.log("template path: %s", templatePath);
+        fs.readFile(
             templatePath,
             "utf8",
             (err, data) => {
-                
                 if (err) {
                     console.error(err);
                     throw err;
                 }
-                console.log(data);
+                console.log("data %s", data)
                 const template = handlebars.compile(data);
                 renderedResult = template(templateData);
-                console.log(renderedResult)
             }
         );
         console.log(renderedResult)
         if(renderedResult != null) {
             console.log(outputPath);
-            fs.writeFileSync(outputPath, renderedResult, err => {
+            fs.writeFile(outputPath, renderedResult, err => {
                 if (err) {
                     console.error(err);
                 } else {
