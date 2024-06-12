@@ -1,7 +1,7 @@
 {{prelude}}
 <!-- START_{{checklistName}} -->
-{{#each mode}}
-- [{{#if mode.isEnabled}}x{{else}} {{/if}}] `{{mode.name}}`
-{{/each}}
+{{~#each mode}}
+- [{{~#if isEnabled}}x{{else}} {{/if}}] `{{name}}`
+{{~/each}}
 <!-- END_{{checklistName}} -->
 {{postlude}}
