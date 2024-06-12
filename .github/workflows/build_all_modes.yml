@@ -124,5 +124,5 @@ jobs:
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: '${{env.MARKDOWN_PATH}}'
+          body-path: '${{ runner.temp }}/markdown/pr-comment.md'
           edit-mode: replace
