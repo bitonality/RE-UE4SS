@@ -75,7 +75,7 @@ module.exports = {
         if(!fs.existsSync(templatePath)) {
             throw new Error(`Template not found at: ${templatePath}`);
         }
-
+        console.log("TEMPLATE: %s", templateData);
         // Register our custom handlebars helpers.
         handlebars.registerHelper('pretty-date', humanReadableDate);
         handlebars.registerHelper('pretty-size', humanReadableSize);
@@ -93,7 +93,7 @@ module.exports = {
                 }
                 console.log("data %s", data)
                 const template = handlebars.compile(data);
-                renderedResult = template(templateData);
+                renderedResult = template(JSON.stringify(templateData));
             }
         );
         console.log(renderedResult)
