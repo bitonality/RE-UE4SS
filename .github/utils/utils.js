@@ -88,7 +88,7 @@ module.exports = {
             "utf8",
             (err, data) => {
                 if (err) {
-                    console.error(err);
+                    console.log(err);
                     throw err;
                 }
                 console.log("data %s", data)
