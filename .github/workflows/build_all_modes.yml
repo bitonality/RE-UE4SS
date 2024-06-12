@@ -30,7 +30,10 @@ jobs:
         with:
           submodules: recursive # Clone the submodule so we can query xmake on the entire project.
           token: ${{ secrets.UEPSEUDO_PAT }}
-
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      - run: npm install handlebars
         # Build modes are supplied by xmake, so we have to download and setup the xmake environment.
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
