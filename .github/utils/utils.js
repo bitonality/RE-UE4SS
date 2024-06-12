@@ -50,6 +50,20 @@ module.exports = {
         return Array.from(matches, (m) => m[1]);
     },
     /**
+     * 
+     * @param {string} checklistName 
+     * @param {string} markdownBody 
+     * @returns {Object.<string, boolean>}
+     */
+    getChecklistFromMarkdown: function(checklistName, markdownBody) {
+        const checklistRegex = new RegExp(`<!--\\s*START_(.*)\\s*-->(.*)<!--\\s*END_\\1\\s*-->`, "gis");
+        const checklist = markdownBody.matchAll(checklistRegex);
+        console.log(checklist[0]);
+        const checklistItemRegex = new RegExp(`\\-\\s\\[(.{1})]\\s(.*)`, "gi");
+        const checklistItems = checklist[0][1].matchAll(checklistItemRegex);
+        return checklistItems.map(i => ({[i[2]]: i[1] == "x"}))
+    },
+    /**
      * Generate a markdown file by passing data to a handlebars template.
      * @param {string} templatePath Path to handlebars template.
      * @param {*} templateData Data to pass to handlebars template.
