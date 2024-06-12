@@ -37,6 +37,15 @@ jobs:
         with:
           xmake-version: "2.9.2"
 
+      - name: Find possible previous comment
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
+        id: findComment
+        with:
+          issue-number: ${{ github.event.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
+
         # `xmake ci --dump=modes` returns a JSON array of all UE4SS modes that xmake knows how to build.
       - name: Calculate the CI job matrix
         id: jobs
@@ -44,18 +53,57 @@ jobs:
         run: |
           $modes = (xmake ci --dump=modes)
           echo "all_modes=$modes" >> $env:GITHUB_OUTPUT
+
       - uses: actions/github-script@v7
-        id: calculate-artifacts
+        if: ${{steps.findComment.outputs.comment-id == 0}}
+        id: generate-markdown
         env:
           DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
           ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
+          MARKDOWN_PATH: '${{ runner.temp }}/markdown/mode-list.md'
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
-            const { DEFAULT_MODES, ALL_MODES } = process.env
-            const script = require('./.github/utils/calculate-modes-pull-request.js');
-            return await script({context}, DEFAULT_MODES, ALL_MODES);
+            const { DEFAULT_MODES, ALL_MODES, MARKDOWN_PATH } = process.env
+            const utils = require("./.github/utils/utils.js");
+            const handlebars = require('handlebars');
+            const defaultModes = JSON.parse(DEFAULT_MODES);
+            const allModes = JSON.parse(ALL_MODES).map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
+            const handlebarsPayload = {mode: allModes, checklistName: "ARTIFACT_LIST", prelude: "# Artifacts To Upload"};
+            utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/mode-checklist.hbs", handlebarsPayload, MARKDOWN_PATH, handlebars);
+      - name: Create comment
+        # Don't update the comment if we didn't generate any artifacts.
+        if: ${{ startsWith(github.ref, 'refs/pull/') && steps.findComment.outputs.comment-id == 0}}
+        env:
+          MARKDOWN_PATH: '${{ runner.temp }}/markdown/mode-list.md'
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
+        with:
+          issue-number: ${{ github.event.number }}
+          body-path: '${{ env.MARKDOWN_PATH }}'
+          edit-mode: replace
+      - name: Find possible previous comment
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
+        id: find-existing-comment
+        with:
+          issue-number: ${{ github.event.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
+      - uses: actions/github-script@v7
+        id: calculate-artifacts
+        env:
+          ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
+          REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.body }}'
+        with:
+          result-encoding: string
+          retries: 3 # Retry in case REST requests fail transitively.
+          script: |
+            const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
+            const utils = require("./.github/utils.js");
+            const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", requestedModesCommentBody);
+            const modeSchema = JSON.parse(allModesAsString).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
+            return JSON.stringify(modeSchema)
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
@@ -116,7 +164,7 @@ jobs:
         with:
           issue-number: ${{ github.event.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '<!-- PR_ARTIFACTS -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
+          body-includes: '<!-- PR_ARTIFACT -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
         # Don't update the comment if we didn't generate any artifacts.
         if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(env.MARKDOWN_PATH) != '' }}
@@ -126,3 +174,5 @@ jobs:
           issue-number: ${{ github.event.number }}
           body-path: '${{ runner.temp }}/markdown/pr-comment.md'
           edit-mode: replace
+
+         
