@@ -3,9 +3,7 @@
 
 
 /** @param {import('github-script').AsyncFunctionArguments} AsyncFunctionArguments */
-module.exports = async ({ github, context }, handlebars) => {
-    const path = require('path');
-    const fs = require("fs");
+module.exports = async ({ github, context }, outputPath, handlebars) => {
     const utils = require("./utils.js");
     const opts =
         await github.rest.actions.listWorkflowRunArtifacts.endpoint.merge({
@@ -40,7 +38,7 @@ module.exports = async ({ github, context }, handlebars) => {
         // @ts-ignore
         artifactData["prCommit"] = context.payload.pull_request.head.sha;
         artifactData["mergeCommit"] = context.sha;
-        artifactData["size"] = utils.humanReadableSize(artifact.size_in_bytes, 2);
+        artifactData["size"] = artifact.size_in_bytes;
         artifactData["lastUpdated"] = utils.humanReadableDate(
             new Date(artifact.updated_at)
         );
@@ -51,8 +49,9 @@ module.exports = async ({ github, context }, handlebars) => {
         templateData.artifact.push(artifactData);
     }
 
-    return utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/pull-request-artifact.hbs", templateData, handlebars);
-    
-   
-
+    utils.generateMarkdownFromTemplate(
+        "./.github/utils/markdown-templates/pull-request-artifact.hbs",
+        templateData,
+        outputPath,
+        handlebars);
 };
