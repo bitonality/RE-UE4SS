@@ -10,6 +10,12 @@ const dateTimeFormat = new Intl.DateTimeFormat('default', {
 });
 
 module.exports = {
+    /**
+     * Converts the size in bytes to a human-friendly representation.
+     * @param {number} bytes Total number of bytes.
+     * @param {number} decimals Total number of decimals to represent. 
+     * @returns {string} Human-friendly representation.
+     */
     humanReadableSize: function(bytes, decimals) {
         if(bytes == 0) return '0 Bytes';
         var k = 1024,
@@ -18,9 +24,20 @@ module.exports = {
             i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
       },
+    /**
+     * Converts a date into a human-friendly UTC representation.
+     * @param {Date} date Date to convert
+     * @returns {string} Human-friendly UTC representation of the date.
+     */
     humanReadableDate: function (date) {
         return dateTimeFormat.format(date);
     },
+    /**
+     * 
+     * @param {*} attributeName 
+     * @param {*} markdownBody 
+     * @returns 
+     */
     getCustomAttributesFromMarkdown: function(attributeName, markdownBody) {
         const re = new RegExp(`\\[${attributeName}=(.*?)\\]`,"gi");
         console.log(re);
