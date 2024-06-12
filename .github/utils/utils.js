@@ -88,7 +88,8 @@ module.exports = {
             "utf8",
             (err, data) => {
                 if (err) {
-                    console.log(err);
+                    console.log("ERROR");
+                    console.log(JSON.stringify(err));
                     throw err;
                 }
                 console.log("data %s", data)
