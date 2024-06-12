@@ -91,9 +91,10 @@ module.exports = {
                     console.error(err);
                     throw err;
                 }
-
+                console.log(JSON.stringify(data));
                 const template = handlebars.compile(JSON.stringify(data));
                 renderedResult = template(templateData);
+                console.log(renderedResult)
             }
         );
         console.log(renderedResult)
