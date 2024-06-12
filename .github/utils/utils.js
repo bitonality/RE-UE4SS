@@ -96,14 +96,14 @@ module.exports = {
                 renderedResult = template(templateData);
             }
         );
-
+        console.log(renderedResult)
         if(renderedResult != null) {
-
+            console.log(outputPath);
             fs.writeFile(outputPath, renderedResult, err => {
                 if (err) {
                     console.error(err);
                 } else {
-                console.log(`Wrote PR comment body to ${outputPath}.`);
+                    console.log(`Wrote PR comment body to ${outputPath}.`);
                 }
             });
               
