@@ -22,7 +22,7 @@ module.exports = async ({ github, context }, outputPath, handlebars) => {
     }
 
     for (const artifact of artifacts) {
-        /** @type {Object.<string, string>} */
+        /** @type {Object.<string, *>} */
         let artifactData = {};
         console.log(artifact.name)
         let artifactNameComponents = artifact.name.split("-");
@@ -39,12 +39,8 @@ module.exports = async ({ github, context }, outputPath, handlebars) => {
         artifactData["prCommit"] = context.payload.pull_request.head.sha;
         artifactData["mergeCommit"] = context.sha;
         artifactData["size"] = artifact.size_in_bytes;
-        artifactData["lastUpdated"] = utils.humanReadableDate(
-            new Date(artifact.updated_at)
-        );
-        artifactData["expiresAt"] = utils.humanReadableDate(
-            new Date(artifact.expires_at)
-        );
+        artifactData["lastUpdated"] = new Date(artifact.updated_at);
+        artifactData["expiresAt"] =  new Date(artifact.expires_at);
 
         templateData.artifact.push(artifactData);
     }
