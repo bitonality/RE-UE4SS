@@ -86,6 +86,8 @@ jobs:
     name: "Report results to pull request"
     runs-on: ubuntu-latest
     needs: [ build ]
+    env:
+      MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -97,8 +99,7 @@ jobs:
         # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
       - uses: actions/github-script@v7
         id: generate-markdown
-        env:
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
+
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
@@ -106,21 +107,11 @@ jobs:
             const { MARKDOWN_PATH } = process.env
             const script = require('./.github/utils/report-artifacts-to-pull-request.js');
             const handlebars = require('handlebars');
-            let markdown = await script({github, context}, handlebars);
-            if(markdown != null) {
-              fs.writeFile(MARKDOWN_PATH, markdown, err => {
-                if (err) {
-                  console.error(err);
-                } else {
-                  core.notice(`Wrote PR comment body to ${MARKDOWN_PATH}.`);
-                  return MARKDOWN_PATH;
-                }
-              });
-            }
+            let markdown = await script({github, context}, MARKDOWN_PATH, handlebars);
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
-        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(env.MARKDOWN_PATH) != '' }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
         id: findComment
         with:
@@ -129,10 +120,10 @@ jobs:
           body-includes: '<!-- PR_ARTIFACTS -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
         # Don't update the comment if we didn't generate any artifacts.
-        if: ${{ startsWith(github.ref, 'refs/pull/') }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(env.MARKDOWN_PATH) != '' }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: '${{steps.generate-markdown.outputs.result}}'
+          body-path: '${{env.MARKDOWN_PATH}}'
           edit-mode: replace
