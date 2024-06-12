@@ -86,13 +86,13 @@ module.exports = {
         fs.readFileSync(
             templatePath,
             "utf8",
-            (err, data) => {
+            (err, templateData) => {
                 if (err) {
                     console.error(err);
                     throw err;
                 }
-                console.log(JSON.stringify(data));
-                const template = handlebars.compile(JSON.stringify(data));
+                console.log(JSON.stringify(templateData));
+                const template = handlebars.compile(JSON.stringify(templateData));
                 renderedResult = template(templateData);
                 console.log(renderedResult)
             }
