@@ -1,6 +1,10 @@
 // @ts-check
+
+
+
 /** @param {import('github-script').AsyncFunctionArguments} AsyncFunctionArguments */
 module.exports = async ({ github, context }, handlebars) => {
+    const path = require('path');
     const fs = require("fs");
     const utils = require("./utils.js");
     const opts =
@@ -13,6 +17,12 @@ module.exports = async ({ github, context }, handlebars) => {
     const artifacts = await github.paginate(opts);
     /** @type {{artifact: Array.<Object.<string, string>> }} */
     const templateData = { artifact: [] };
+
+    if(artifacts.length == 0) {
+        // Nothing to report to the PR.
+        return;
+    }
+
     for (const artifact of artifacts) {
         /** @type {Object.<string, string>} */
         let artifactData = {};
@@ -41,21 +51,8 @@ module.exports = async ({ github, context }, handlebars) => {
         templateData.artifact.push(artifactData);
     }
 
-    let renderedResult = "";
-    fs.readFile(
-        "./.github/utils/markdown-templates/pull-request-artifact.hbs",
-        "utf8",
-        (err, data) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-            console.log(data);
-            const template = handlebars.compile(JSON.stringify(data));
-            renderedResult = template(templateData);
-            console.log(renderedResult);
-        }
-    );
+    return utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/pull-request-artifact.js", templateData, handlebars);
+    
+   
 
-    return renderedResult;
 };

@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 const dateTimeFormat = new Intl.DateTimeFormat('default', {
     month: 'short',
     day: 'numeric',
@@ -43,5 +45,33 @@ module.exports = {
         console.log(re);
         let matches = markdownBody.matchAll(re);
         return Array.from(matches, (m) => m[1]);
+    },
+    /**
+     * 
+     * @param {string} templatePath Path to handlebars template.
+     * @param {*} templateData Data to pass to handlebars template.
+     * @param {*} handlebars Handlebars module.
+     * @returns {string?} Generated markdown
+     */
+    generateMarkdownFromTemplate: function(templatePath, templateData, handlebars) {
+        if(!fs.existsSync(templatePath)) {
+            throw new Error(`Template not found at: ${templatePath}`);
+        }
+
+        fs.readFile(
+            templatePath,
+            "utf8",
+            (err, data) => {
+                if (err) {
+                    console.error(err);
+                    throw err;
+                }
+
+                const template = handlebars.compile(JSON.stringify(data));
+                renderedResult = template(templateData);
+
+                return renderedResult;
+            }
+        );
     }
 };

@@ -97,13 +97,26 @@ jobs:
         # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
       - uses: actions/github-script@v7
         id: generate-markdown
+        env:
+          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
+            const { MARKDOWN_PATH } = process.env
             const script = require('./.github/utils/report-artifacts-to-pull-request.js');
             const handlebars = require('handlebars');
-            return await script({github, context}, handlebars);
+            let markdown = await script({github, context}, handlebars);
+            if(markdown != null) {
+              fs.writeFile(MARKDOWN_PATH, markdown, err => {
+                if (err) {
+                  console.error(err);
+                } else {
+                  core.notice(`Wrote PR comment body to ${MARKDOWN_PATH}.`);
+                  return MARKDOWN_PATH;
+                }
+              });
+            }
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
@@ -121,7 +134,5 @@ jobs:
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body: |
-            <!-- PR_ARTIFACTS -->
-            ${{steps.generate-markdown.outputs.result}}
+          body-path: '${{steps.generate-markdown.outputs.result}}'
           edit-mode: replace
