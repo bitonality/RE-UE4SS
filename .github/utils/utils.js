@@ -86,7 +86,7 @@ module.exports = {
         const data = fs.readFileSync(templatePath, "utf8");
         console.log("data %s", data)
         const template = handlebars.compile(data);
-        renderedResult = template(JSON.stringify(templateData));
+        renderedResult = template(templateData);
         console.log(renderedResult)
         if(renderedResult != null) {
             if(!fs.existsSync(path.dirname(outputPath))) {

@@ -39,6 +39,7 @@ jobs:
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: "2.9.2"
+          actions-cache-folder: '.xmake-cache'
 
       - name: Find possible previous comment
         if: ${{ startsWith(github.ref, 'refs/pull/') }}
