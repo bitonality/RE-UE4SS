@@ -86,8 +86,6 @@ jobs:
     name: "Report results to pull request"
     runs-on: ubuntu-latest
     needs: [ build ]
-    env:
-      MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -99,7 +97,8 @@ jobs:
         # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
       - uses: actions/github-script@v7
         id: generate-markdown
-
+        env:
+          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
