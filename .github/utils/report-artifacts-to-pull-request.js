@@ -26,7 +26,7 @@ module.exports = async ({ github, context }, handlebars) => {
     for (const artifact of artifacts) {
         /** @type {Object.<string, string>} */
         let artifactData = {};
-
+        console.log(artifact.name)
         let artifactNameComponents = artifact.name.split("-");
         artifactData["badgeName"] = "Build-Success"; // Default name to pass to shields.io.
         if (artifactNameComponents.length > 1) {

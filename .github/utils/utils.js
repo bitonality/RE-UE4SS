@@ -68,8 +68,9 @@ module.exports = {
                 }
 
                 const template = handlebars.compile(JSON.stringify(data));
+                console.log(data);
                 renderedResult = template(templateData);
-
+                console.log(renderedResult);
                 return renderedResult;
             }
         );
