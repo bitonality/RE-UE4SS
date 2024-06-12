@@ -1,7 +1,4 @@
 // @ts-check
-
-
-
 /** @param {import('github-script').AsyncFunctionArguments} AsyncFunctionArguments */
 module.exports = async ({ github, context }, outputPath, handlebars) => {
     const utils = require("./utils.js");

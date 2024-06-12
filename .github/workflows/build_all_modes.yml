@@ -74,7 +74,7 @@ jobs:
             const handlebars = require('handlebars');
             const defaultModes = JSON.parse(DEFAULT_MODES);
             const allModes = JSON.parse(ALL_MODES).map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
-            const handlebarsPayload = {mode: allModes, checklistName: "ARTIFACT_LIST", prelude: "# Artifacts To Upload"};
+            const handlebarsPayload = {mode: allModes, checklistName: "ARTIFACT_LIST", dropdown: "Artifacts To Upload"};
             utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/mode-checklist.hbs", handlebarsPayload, MARKDOWN_PATH, handlebars);
       - name: Create comment
         # Don't update the comment if we didn't generate any artifacts.
@@ -138,6 +138,8 @@ jobs:
     name: "Report results to pull request"
     runs-on: ubuntu-latest
     needs: [ build ]
+    env:
+      MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
@@ -149,8 +151,7 @@ jobs:
         # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
       - uses: actions/github-script@v7
         id: generate-markdown
-        env:
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
+
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
@@ -176,7 +177,7 @@ jobs:
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: '${{ runner.temp }}/markdown/pr-comment.md'
+          body-path: ${{env.MARKDOWN_PATH}}}
           edit-mode: replace
 
          
