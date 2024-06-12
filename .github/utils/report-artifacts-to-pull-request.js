@@ -14,6 +14,7 @@ module.exports = async ({github, context}, handlebars) => {
     
       var templateData = new Array();
       for (const artifact of artifacts) {
+        console.log(artifact.name)
         var artifactData = {};
 
         let artifactNameComponents = artifact.name.split('-');
@@ -42,9 +43,10 @@ module.exports = async ({github, context}, handlebars) => {
           console.error(err);
           return;
         }
-
+        console.log(data);
         var template = handlebars.compile(JSON.stringify(data));
         renderedResult = template(templateData);
+        console.log(renderedResult);
       });
       
 
