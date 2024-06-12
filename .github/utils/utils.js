@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 
 const dateTimeFormat = new Intl.DateTimeFormat('default', {
     month: 'short',
@@ -86,10 +87,11 @@ module.exports = {
         console.log("data %s", data)
         const template = handlebars.compile(data);
         renderedResult = template(JSON.stringify(templateData));
-            
-   
         console.log(renderedResult)
         if(renderedResult != null) {
+            if(!fs.existsSync(path.dirname(outputPath))) {
+                fs.mkdirSync(path.dirname(outputPath));
+            }
             console.log(outputPath);
             fs.writeFileSync(outputPath, renderedResult);
             console.log(`Wrote PR comment body to ${outputPath}.`);
