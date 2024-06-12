@@ -83,7 +83,7 @@ module.exports = {
         /** @type {string?} */
         let renderedResult = null;
 
-        fs.readFile(
+        fs.readFileSync(
             templatePath,
             "utf8",
             (err, data) => {
@@ -99,7 +99,7 @@ module.exports = {
         console.log(renderedResult)
         if(renderedResult != null) {
             console.log(outputPath);
-            fs.writeFile(outputPath, renderedResult, err => {
+            fs.writeFileSync(outputPath, renderedResult, err => {
                 if (err) {
                     console.error(err);
                 } else {
