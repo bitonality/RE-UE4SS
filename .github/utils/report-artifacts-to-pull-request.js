@@ -51,7 +51,7 @@ module.exports = async ({ github, context }, handlebars) => {
         templateData.artifact.push(artifactData);
     }
 
-    return utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/pull-request-artifact.js", templateData, handlebars);
+    return utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/pull-request-artifact.hbs", templateData, handlebars);
     
    
 
