@@ -25,6 +25,7 @@ const dateTimeFormat = new Intl.DateTimeFormat('default', {
             i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
       }
+
     /**
      * Converts a date into a human-friendly UTC representation.
      * @param {Date} date Date to convert
@@ -49,7 +50,7 @@ module.exports = {
         return Array.from(matches, (m) => m[1]);
     },
     /**
-     * 
+     * Generate a markdown file by passing data to a handlebars template.
      * @param {string} templatePath Path to handlebars template.
      * @param {*} templateData Data to pass to handlebars template.
      * @param {string} outputPath Path to write the processed markdown file to.
@@ -61,11 +62,13 @@ module.exports = {
             throw new Error(`Template not found at: ${templatePath}`);
         }
 
+        // Register our custom handlebars helpers.
         handlebars.registerHelper('pretty-date', humanReadableDate);
         handlebars.registerHelper('pretty-size', humanReadableSize);
 
         /** @type {string?} */
         let renderedResult = null;
+
         fs.readFile(
             templatePath,
             "utf8",
