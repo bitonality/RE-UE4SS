@@ -98,7 +98,7 @@ jobs:
         id: calculate-artifacts
         env:
           ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
-          REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.body }}'
+          REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.comment-body }}'
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
