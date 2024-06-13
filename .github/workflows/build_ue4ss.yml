@@ -17,7 +17,6 @@ on:
         type: string
       should-upload-artifact:
         description: 'Should build output be uploaded as an artifact?'
-        default: false
         type: boolean
       artifact-list:
         description:
