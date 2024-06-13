@@ -122,7 +122,7 @@ jobs:
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
-
+            console.log(JSON.stringify(requestedArtifacts))
             const modesNoArtifacts = [];
             const modesWithArtifact = [];
 
