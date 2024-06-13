@@ -32,7 +32,7 @@ jobs:
       #   },
       #   ...
       # ]
-      matrix: ${{ steps.calculate-artifacts.outputs.result }}
+      matrix: ${{ steps.calculate-artifacts.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -130,6 +130,7 @@ jobs:
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
             const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
+            core.setOutput('matrix', JSON.stringify(modeSchema));
             console.log(JSON.stringify(modeSchema));
             return modeSchema
 
