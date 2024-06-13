@@ -107,6 +107,7 @@ jobs:
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
             const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
+            console.log(JSON.stringify(modeSchema));
             return JSON.stringify(modeSchema)
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
