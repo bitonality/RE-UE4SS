@@ -19,36 +19,48 @@ concurrency:
 
 jobs:
   # Dynamically calculate which modes to build.
+  # We also need to determine which modes should upload artifacts.
   calculate-matrix:
     name: Calculate job matrix
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.calculate-artifacts.outputs.result }} # JSON list of all modes.
+      # JSON array with the following schema:
+      # [
+      #   {
+      #     "mode": "Game__Shipping__Win64",
+      #     "artifact": false
+      #   },
+      #   ...
+      # ]
+      matrix: ${{ steps.calculate-artifacts.outputs.result }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive # Clone the submodule so we can query xmake on the entire project.
           token: ${{ secrets.UEPSEUDO_PAT }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-      - run: npm install handlebars
+
+        # We need handlebars to generate markdown for pull requests.
+      - name: Install Handlebars
+        run: npm install handlebars@4.7.8
+
         # Build modes are supplied by xmake, so we have to download and setup the xmake environment.
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: "2.9.2"
-          actions-cache-folder: '.xmake-cache'
+          actions-cache-folder: '.xmake-cache' # This auto-cache functionality only works on linux runners.
 
-      - name: Find possible previous comment
+        # We allow users to interactively specify what artifacts to upload by using checkboxes in a PR comment.
+        # Attempt to find an existing comment with the checkboxes.
+      - name: Try to get Artifact Request
         if: ${{ startsWith(github.ref, 'refs/pull/') }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
-        id: findComment
+        id: get-artifact-request
         with:
           issue-number: ${{ github.event.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
+          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden HTML comment indicates which PR comment has the checklist.
 
         # `xmake ci --dump=modes` returns a JSON array of all UE4SS modes that xmake knows how to build.
       - name: Calculate the CI job matrix
@@ -59,7 +71,7 @@ jobs:
           echo "all_modes=$modes" >> $env:GITHUB_OUTPUT
 
       - uses: actions/github-script@v7
-        if: ${{steps.findComment.outputs.comment-id == 0}}
+        if: ${{steps.get-artifact-request.outputs.comment-id == 0}}
         id: generate-markdown
         env:
           DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
@@ -106,9 +118,7 @@ jobs:
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
-            console.log(JSON.stringify(requestedArtifacts));
             const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
-            console.log(JSON.stringify(modeSchema));
             return JSON.stringify(modeSchema)
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
@@ -126,7 +136,7 @@ jobs:
     with:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
-      should-upload-artifact: ${{ matrix.artifact == 'true' }}
+      should-upload-artifact: ${{ matrix.artifact }}
       # JSON that declares what files to upload for specific xmake targets.
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
       # This specifies that the `UE4SS` target should upload its target file and symbol file.
