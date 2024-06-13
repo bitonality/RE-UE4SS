@@ -54,16 +54,17 @@ module.exports = {
      * 
      * @param {string} checklistName 
      * @param {string} markdownBody 
-     * @returns {Object.<string, boolean>}
+     * @returns {Map<string, boolean>}
      */
     getChecklistFromMarkdown: function(checklistName, markdownBody) {
         const checklistRegex = new RegExp(`<!--\\s*START_${checklistName}\\s*-->(.*)<!--\\s*END_${checklistName}\\s*-->`, "gis");
         const checklist = Array.from(markdownBody.matchAll(checklistRegex), m=> m[1]);
         const checklistItemRegex = new RegExp('\\-\\s\\[(.{1})]\\s`([^`]*)`', "gi");
         const checklistItems = checklist[0].matchAll(checklistItemRegex);
-        let checklistMap = {}
+        /** @type {Map<string, boolean>} */
+        let checklistMap = new Map();
         for(const checklistItem of checklistItems) {
-            checklistMap[checklistItem[2]] = (checklistItem == "x");
+            checklistMap.set(checklistItem[2], Boolean(checklistItem == "x"));
         }
         
         return checklistMap;
