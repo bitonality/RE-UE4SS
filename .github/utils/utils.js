@@ -61,7 +61,6 @@ module.exports = {
         const checklist = Array.from(markdownBody.matchAll(checklistRegex), m=> m[1]);
         const checklistItemRegex = new RegExp('\\-\\s\\[(.{1})]\\s`([^`]*)`', "gi");
         const checklistItems = checklist[0].matchAll(checklistItemRegex);
-        /** @type {Object.<string, boolean>} */
         let checklistMap = {}
         for(const checklistItem of checklistItems) {
             checklistMap[checklistItem[2]] = (checklistItem == "x");
