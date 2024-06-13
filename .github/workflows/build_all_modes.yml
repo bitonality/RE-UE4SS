@@ -24,8 +24,15 @@ jobs:
     name: Calculate job matrix
     runs-on: ubuntu-latest
     outputs:
-      modes-no-artifacts: ${{ steps.calculate-artifacts.outputs.matrix-no-artifact }}
-      modes-with-artifacts: ${{ steps.calculate-artifacts.outputs.matrix-with-artifact }}
+      # JSON array with the following schema:
+      # [
+      #   {
+      #     "mode": "Game__Shipping__Win64",
+      #     "artifact": false
+      #   },
+      #   ...
+      # ]
+      matrix: ${{ steps.calculate-artifacts.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,7 +115,7 @@ jobs:
           body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden HTML comment indicates which PR comment has the checklist.
         
         # We now compare the user selected artifacts with the xmake mode list to generate the finalized matrix.
-      - name: Finalize Mode Matrices
+      - name: Finalize Mode Matrix  
         uses: actions/github-script@v7
         id: calculate-artifacts
         env:
@@ -122,56 +129,27 @@ jobs:
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
-            console.log(requestedArtifacts)
-            const modesNoArtifacts = [];
-            const modesWithArtifact = [];
-            const allModes = JSON.parse(ALL_MODES);
-            for(const mode of allModes) {
-              if(requestedArtifacts[mode]) {
-                modesWithArtifact.push(mode);
-              } else {
-                modesNoArtifacts.push(mode);
-              }
-            }
-
-            core.setOutput('matrix-no-artifact', JSON.stringify(modesNoArtifacts));
-            console.log(JSON.stringify(modesNoArtifacts));
-            core.setOutput('matrix-with-artifact', JSON.stringify(modesWithArtifact));
-            console.log(JSON.stringify(modesWithArtifact));
-
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m].toString()}));
+            core.setOutput('matrix', JSON.stringify(modeSchema));
+            console.log(JSON.stringify(modeSchema));
+            return modeSchema
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
-  build-no-artifact:
+  build:
     name: ${{ matrix.mode }}
     needs: [ calculate-matrix ] # Ensure the mode/artifact matrix has been generated before we launch this job.
     strategy:
       fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
       matrix: 
         # Use our generated matrix to populate the `include` array.
-        mode: ${{ fromJSON(needs.calculate-matrix.outputs.modes-no-artifacts) }}
+        include: ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
     uses: ./.github/workflows/build_ue4ss.yml
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
     with:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
-      should-upload-artifact: false
-
-  build-with-artifact:
-    name: ${{ matrix.mode }}
-    needs: [ calculate-matrix ] # Ensure the mode/artifact matrix has been generated before we launch this job.
-    strategy:
-      fail-fast: false # Disable fast failing because we want to cancel other modes if one fails.
-      matrix: 
-        # Use our generated matrix to populate the `include` array.
-        mode: ${{ fromJSON(needs.calculate-matrix.outputs.modes-with-artifacts) }}
-    # Run our reusable workflow for each mode in our matrix.
-    uses: ./.github/workflows/build_ue4ss.yml
-    secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
-    with:
-      build-mode: ${{ matrix.mode }}
-      commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
-      should-upload-artifact: true
+      should-upload-artifact: ${{ matrix.artifact }}
       # JSON that declares what files to upload for specific xmake targets.
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
       # This specifies that the `UE4SS` target should upload its target file and symbol file.
@@ -184,8 +162,10 @@ jobs:
   report-artifacts:
     name: "Report results to pull request"
     runs-on: ubuntu-latest
-    needs: [ build-with-artifact ]
+    needs: [ build,calculate-matrix ]
     steps:
+      - run: echo ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
+      - run: echo ${{ needs.calculate-matrix.outputs.matrix }}
         # We need to check out the repository to load our custom scripts/markdown templates.
       - uses: actions/checkout@v4
 

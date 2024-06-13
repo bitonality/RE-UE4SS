@@ -64,7 +64,7 @@ module.exports = {
         /** @type {Map<string, boolean>} */
         let checklistMap = new Map();
         for(const checklistItem of checklistItems) {
-            checklistMap.set(checklistItem[2], Boolean(checklistItem == "x"));
+            checklistMap.set(checklistItem[2], checklistItem[1] == "x");
         }
         
         return checklistMap;
