@@ -148,7 +148,7 @@ jobs:
     with:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
-      should-upload-artifact: ${{ matrix.artifact == true }}
+      should-upload-artifact: ${{ fromJson(matrix.artifact) }}
       # JSON that declares what files to upload for specific xmake targets.
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
       # This specifies that the `UE4SS` target should upload its target file and symbol file.
