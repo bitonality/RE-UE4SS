@@ -123,7 +123,7 @@ jobs:
           # Passing the comment markdown body so we can parse the artifact checklist.
           REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.comment-body }}'
         with:
-          result-encoding: string
+          result-encoding: json
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
@@ -131,7 +131,7 @@ jobs:
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
             const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
             console.log(JSON.stringify(modeSchema));
-            return JSON.stringify(modeSchema)
+            return modeSchema
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
