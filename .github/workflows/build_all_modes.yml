@@ -135,7 +135,9 @@ jobs:
             }
 
             core.setOutput('matrix-no-artifact', JSON.stringify(modesNoArtifacts));
+            console.log(JSON.stringify(modesNoArtifacts));
             core.setOutput('matrix-with-artifact', JSON.stringify(modesWithArtifact));
+            console.log(JSON.stringify(modesWithArtifact));
 
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
