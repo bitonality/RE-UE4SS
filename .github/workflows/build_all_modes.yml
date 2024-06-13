@@ -123,13 +123,13 @@ jobs:
           # Passing the comment markdown body so we can parse the artifact checklist.
           REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.comment-body }}'
         with:
-          result-encoding: json
+          result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts[m]}));
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: new Boolean(requestedArtifacts[m]).toString()}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
             console.log(JSON.stringify(modeSchema));
             return modeSchema
