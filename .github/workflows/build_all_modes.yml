@@ -63,20 +63,23 @@ jobs:
           body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden HTML comment indicates which PR comment has the checklist.
 
         # `xmake ci --dump=modes` returns a JSON array of all UE4SS modes that xmake knows how to build.
-      - name: Calculate the CI job matrix
-        id: jobs
+      - name: Get xmake Modes
+        id: get-xmake-modes
         shell: pwsh
         run: |
           $modes = (xmake ci --dump=modes)
           echo "all_modes=$modes" >> $env:GITHUB_OUTPUT
 
-      - uses: actions/github-script@v7
+        # We need to add the artifact checklist comment on the PR if we didn't find it earlier.
+      - name: Add artifact checklist to PR
+        uses: actions/github-script@v7
         if: ${{steps.get-artifact-request.outputs.comment-id == 0}}
         id: generate-markdown
         env:
+          # Default modes that we want to upload artifacts for. These will be checked off in the PR comment.
           DEFAULT_MODES: '["Game__Debug__Win64","Game__Shipping__Win64"]'
-          ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/mode-list.md'
+          ALL_MODES: '${{steps.get-xmake-modes.outputs.all_modes}}'
+          MARKDOWN_PATH: '${{ runner.temp }}/markdown/mode-list.md' # Save generated markdown to a file.
         with:
           result-encoding: string
           retries: 3 # Retry in case REST requests fail transitively.
@@ -88,16 +91,20 @@ jobs:
             const allModes = JSON.parse(ALL_MODES).map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
             const handlebarsPayload = {mode: allModes, checklistName: "ARTIFACT_LIST", dropdown: "Artifacts To Upload"};
             utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/mode-checklist.hbs", handlebarsPayload, MARKDOWN_PATH, handlebars);
-      - name: Create comment
-        # Don't update the comment if we didn't generate any artifacts.
-        if: ${{ startsWith(github.ref, 'refs/pull/') && steps.findComment.outputs.comment-id == 0}}
-        env:
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/mode-list.md'
+            return MARKDOWN_PATH; // Return the path to the file we wrote for future steps.
+
+        # Add the special checklist selection comment to the PR.
+        # This is how users can specify which modes should upload artifacts.
+      - name: Create Checklist
+        # Don't create the checklist if we were able to fetch it in the prior steps.
+        if: ${{ startsWith(github.ref, 'refs/pull/') && steps.get-artifact-request.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           issue-number: ${{ github.event.number }}
-          body-path: '${{ env.MARKDOWN_PATH }}'
+          body-path: '${{ steps.generate-markdown.outputs.result }}'
           edit-mode: replace
+        
+        # We now get the artifact selection checklist from comments since we've ensured it exists by now.
       - name: Find possible previous comment
         if: ${{ startsWith(github.ref, 'refs/pull/') }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
@@ -105,11 +112,15 @@ jobs:
         with:
           issue-number: ${{ github.event.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
-      - uses: actions/github-script@v7
+          body-includes: '<!-- START_ARTIFACT_LIST -->' # Hidden HTML comment indicates which PR comment has the checklist.
+        
+        # We now compare the user selected artifacts with the xmake mode list to generate the finalized matrix.
+      - name: Finalize Mode Matrix  
+        uses: actions/github-script@v7
         id: calculate-artifacts
         env:
-          ALL_MODES: '${{steps.jobs.outputs.all_modes}}'
+          ALL_MODES: '${{steps.get-xmake-modes.outputs.all_modes}}'
+          # Passing the comment markdown body so we can parse the artifact checklist.
           REQUESTED_ARTIFACTS_COMMENT: '${{ steps.find-existing-comment.outputs.comment-body }}'
         with:
           result-encoding: string
