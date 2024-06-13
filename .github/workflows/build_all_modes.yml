@@ -125,8 +125,8 @@ jobs:
             console.log(JSON.stringify(requestedArtifacts))
             const modesNoArtifacts = [];
             const modesWithArtifact = [];
-
-            for(const mode in JSON.parse(ALL_MODES)) {
+            const allModes = JSON.parse(ALL_MODES);
+            for(const mode of allModes) {
               if(requestedArtifacts[mode]) {
                 modesWithArtifact.push(mode);
               } else {
