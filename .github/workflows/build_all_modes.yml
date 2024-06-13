@@ -147,7 +147,7 @@ jobs:
     with:
       build-mode: ${{ matrix.mode }}
       commit-sha: ${{ github.sha }} # This is the SHA of the PR merge result, not the HEAD of the PR branch!
-      should-upload-artifact: ${{ matrix.artifact }}
+      should-upload-artifact: ${{ matrix.artifact == true }}
       # JSON that declares what files to upload for specific xmake targets.
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
       # This specifies that the `UE4SS` target should upload its target file and symbol file.
@@ -162,15 +162,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build ]
     steps:
+        # We need to check out the repository to load our custom scripts/markdown templates.
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-      - run: npm install handlebars
-        # We use GitHub's inline script step instead of defining our own JS/TypeScript action.
-        # This avoids us having to take NPM dependencies in our repo.
-        # We should consider implementing actions in an NPM project if the logic becomes too complex or unmaintainable. 
-      - uses: actions/github-script@v7
+
+        # We need handlebars to generate markdown for pull requests.
+      - name: Install Handlebars
+        run: npm install handlebars@4.7.8
+
+      - name: Generate Artifact Report
+        uses: actions/github-script@v7
         id: generate-markdown
         env:
           MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
@@ -182,12 +182,11 @@ jobs:
             const script = require('./.github/utils/report-artifacts-to-pull-request.js');
             const handlebars = require('handlebars');
             let markdown = await script({github, context}, MARKDOWN_PATH, handlebars);
+            return MARKDOWN_PATH; // Return the path to the file we wrote for future steps.
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
-        env:
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(env.MARKDOWN_PATH) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.result) != '' }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
         id: findComment
         with:
@@ -195,15 +194,13 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: '<!-- PR_ARTIFACT -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
-        env:
-          MARKDOWN_PATH: '${{ runner.temp }}/markdown/pr-comment.md'
         # Don't update the comment if we didn't generate any artifacts.
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(env.MARKDOWN_PATH) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.result) != '' }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: ${{env.MARKDOWN_PATH}}}
+          body-path: ${{steps.generate-markdown.outputs.result}}}
           edit-mode: replace
 
          
