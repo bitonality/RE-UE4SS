@@ -63,9 +63,10 @@ module.exports = {
         const checklistItems = checklist[0].matchAll(checklistItemRegex);
         /** @type {Object.<string, boolean>} */
         let checklistMap = {}
-        for(const checklistItem in checklistItems) {
+        for(const checklistItem of checklistItems) {
             checklistMap[checklistItem[2]] = (checklistItem == "x");
         }
+        
         return checklistMap;
     },
     /**
