@@ -183,213 +183,157 @@ describe('generateMarkdownFromTemplate', () => {
     });
 });
 
-describe('hiddenTagWhitespaceTests', () => {
-    describe.each([
-        {
-            body: `
+describe('Hidden Tags Parsing', () => {
+    describe('Whitespace Handling', () => {
+        test('Parse Hidden Tag with Whitespace', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            const expected = `FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
+
+        test('Parse Hidden Tag with Whitespace (Trimmed)', () => {
+            const body = `
 <!--    START_TEST    -->
 FOO
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            const expected = `FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
+
+        test('Parse Hidden Tag with Whitespace (End Tag)', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 <!--    END_TEST    -->
-`},
-    ])('Parse Hidden Tag: %#', ({ body, expected = `FOO` }) => {
-        test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected); });
+`;
+            const expected = `FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
     });
 
-    describe.each([
-        {
-            body: `
+    describe('Duplicate Tags', () => {
+        test('Parse Duplicate Tags', () => {
+            const body = `
 <!-- START_TEST -->
 <!-- START_TEST -->
 FOO
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
+
+        test('Parse Nested Duplicate Tags', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 <!-- START_TEST -->
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
+
+        test('Parse Misplaced Duplicate Tags', () => {
+            const body = `
 <!-- START_TEST -->
 <!-- END_TEST -->
 FOO
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
+
+        test('Parse Overlapping Duplicate Tags', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 <!-- END_TEST -->
 <!-- END_TEST -->
-`},
-    ])('Parse Duplicate Tags: %#', ({ body }) => {
-        test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull(); });
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
     });
 
-    describe.each([
-        {
-            body: `
+    describe('Missing Tags', () => {
+        test('Parse Missing Start Tag', () => {
+            const body = `
 <!-- START_TEST -->
-`},
-        {
-            body: `
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
+
+        test('Parse Missing End Tag', () => {
+            const body = `
 <!-- END_TEST -->
-`},
-    ])('Parse Missing Tags: %#', ({ body }) => {
-        test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull(); });
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBeNull();
+        });
     });
 
-    describe.each([
-        {
-            body: `
+    describe('Case Insensitive Tags', () => {
+        test('Parse Case Insensitive Start Tag', () => {
+            const body = `
 <!-- start_test -->
 FOO
 <!-- END_TEST -->
-`},
-        {
-            body: `
+`;
+            const expected = `FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBe(expected);
+        });
+
+        test('Parse Case Insensitive End Tag', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 <!-- end_test -->
-`},
-    ])('Parse Case Insensitive Tags: %#', ({ body, expected = `FOO` }) => {
-        test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBe(expected); });
+`;
+            const expected = `FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toBe(expected);
+        });
     });
 
-    describe.each([
-        {
-            body: `
+    describe('Tags with Inner Newlines', () => {
+        test('Parse Tags with Inner Newlines', () => {
+            const body = `
 <!-- START_TEST -->
 
 FOO
 
 <!-- END_TEST -->
-`, expected: `
+`;
+            const expected = `
 FOO
-`},
-        {
-            body: `
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
+
+        test('Parse Tags with Inner Newlines (Leading Newline)', () => {
+            const body = `
 <!-- START_TEST -->
 FOO
 
 <!-- END_TEST -->
-`, expected: `FOO
-`},
-        {
-            body: `
+`;
+            const expected = `FOO
+`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
+
+        test('Parse Tags with Inner Newlines (Trailing Newline)', () => {
+            const body = `
 <!-- START_TEST -->
 
 FOO
 <!-- END_TEST -->
-`, expected: `
-FOO`},
-    ])('Parse Tags With Inner Newlines: %#', ({ body, expected }) => {
-        test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected); });
+`;
+            const expected = `
+FOO`;
+            expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected);
+        });
     });
 });
 
-
-/*
-test('parseValidChecklist', () => {
-    const validChecklist = `
-<!-- START_ARTIFACT_LIST -->
-- [ ] \`Game__Test__Win64\`
-- [x] \`CasePreserving__Test__Win64\`
-- [ ] \`CasePreserving__Shipping__Win64\`
-- [x] \`Game__Shipping__Win64\`
-- [x] \`Game__Debug__Win64\`
-- [ ] \`Game__Dev__Win64\`
-- [x] \`CasePreserving__Dev__Win64\`
-- [ ] \`CasePreserving__Debug__Win64\`
-<!-- END_ARTIFACT_LIST -->
-`;
-
-    const parsedMap = new Map([
-        ["Game__Test__Win64", false],
-        ["CasePreserving__Test__Win64", true],
-        ["CasePreserving__Shipping__Win64", false],
-        ["Game__Shipping__Win64", true],
-        ["Game__Debug__Win64", true],
-        ["Game__Dev__Win64", false],
-        ["CasePreserving__Dev__Win64", true],
-        ["CasePreserving__Debug__Win64", false]
-    ]);
-
-    expect(utils.getChecklistFromMarkdown("ARTIFACT_LIST", validChecklist)).toEqual(parsedMap);
-});
-
-test('parsePartialChecklist', () => {
-    const validChecklist = `
-<!-- START_ARTIFACT_LIST -->
-- [ ] \`Game__Test__Win64\`
-- [x] Test Line
-- [x] \`CasePreserving_Test_Win64\`
-<!-- END_ARTIFACT_LIST -->
-`;
-const parsedMap = new Map([
-    ["Game__Test__Win64", false],
-    ["CasePreserving_Test_Win64", true]
-]);
-
-    expect(utils.getChecklistFromMarkdown("ARTIFACT_LIST", validChecklist)).toEqual(parsedMap);
-});
-
-test('parseMalformedChecklist', () => {
-    const validChecklist = `
-<!-- START_ARTIFACT_LIST -->
-Malformed Markdown
-<!-- END_ARTIFACT_LIST -->
-`;
-
-    expect(utils.getChecklistFromMarkdown("ARTIFACT_LIST", validChecklist).size).toBe(0);
-});
-
-test('mismatchedTagsChecklist', () => {
-    const validChecklist = `
-<!-- START_FOO_LIST -->
-Malformed Markdown
-<!-- END_BAR_LIST -->
-`;
-
-    expect(utils.getChecklistFromMarkdown("FOO_LIST", validChecklist).size).toBe(0);
-});
-
-test('redundantStartTagChecklist', () => {
-    const validChecklist = `
-<!-- START_FOO_LIST -->
-- [ ] \`BAR\`
-<!-- START_FOO_LIST -->
-- [ ] \`BAZ\`
-<!-- END_FOO_LIST -->
-`;
-
-    expect(utils.getChecklistFromMarkdown("FOO_LIST", validChecklist).size).toBe(0);
-});
-
-test('redundantEndTagChecklist', () => {
-    const validChecklist = `
-<!-- START_FOO_LIST -->
-- [ ] \`BAR\`
-<!-- END_FOO_LIST -->
-- [ ] \`BAZ\`
-<!-- END_FOO_LIST -->
-`;
-
-    expect(utils.getChecklistFromMarkdown("FOO_LIST", validChecklist).size).toBe(0);
-});
-
-*/
