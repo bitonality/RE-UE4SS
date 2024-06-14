@@ -128,7 +128,8 @@ jobs:
           script: |
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
-            const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
+            const checklistBody = utils.getHiddenTagsFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
+            const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", checklistBody);
             const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts.get(m)}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
             console.log(JSON.stringify(modeSchema));
