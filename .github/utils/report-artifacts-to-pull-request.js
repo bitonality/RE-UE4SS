@@ -31,6 +31,7 @@ module.exports = async ({ github, context }, outputPath, handlebars) => {
         }
 
         artifactData["logsUrl"] = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+        artifactData["artifactUrl"] = artifact.url;
         // @ts-ignore
         artifactData["prCommit"] = context.payload.pull_request.head.sha;
         artifactData["mergeCommit"] = context.sha;
