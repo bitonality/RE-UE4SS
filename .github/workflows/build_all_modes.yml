@@ -201,7 +201,7 @@ jobs:
         with:
           issue-number: ${{ github.event.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: '<!-- PR_ARTIFACT -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
+          body-includes: '<!-- PR_ARTIFACTS -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
         # Don't update the comment if we didn't generate any artifacts.
         if: ${{ startsWith(github.ref, 'refs/pull/') }}
