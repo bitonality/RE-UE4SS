@@ -2,11 +2,13 @@
 {{#if dropdownLabel}}
 <details><summary>{{dropdownLabel}}</summary>
 {{/if}}
+
 <!-- START_{{checklistName}} -->
 {{#each item}}
 - [{{#if isEnabled}}x{{else}} {{/if}}] `{{name}}`
 {{/each}}
 <!-- END_{{checklistName}} -->
+
 {{#if dropdownLabel}}
 </details>
 {{/if}}

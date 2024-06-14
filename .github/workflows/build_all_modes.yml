@@ -92,7 +92,7 @@ jobs:
             const utils = require("./.github/utils/utils.js");
             const handlebars = require('handlebars');
             const defaultModes = JSON.parse(DEFAULT_MODES);
-            const allModes = JSON.parse(ALL_MODES).sort().map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
+            const allModes = JSON.parse(ALL_MODES).sort().reverse().map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
             const handlebarsPayload = {item: allModes, checklistName: "ARTIFACT_LIST", dropdownLabel: "Artifacts To Upload"};
             utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/mode-checklist.hbs", handlebarsPayload, MARKDOWN_PATH, handlebars);
             return MARKDOWN_PATH; // Return the path to the file we wrote for future steps.
