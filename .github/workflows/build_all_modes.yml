@@ -130,9 +130,9 @@ jobs:
             const utils = require("./.github/utils/utils.js");
             const checklistBody = utils.getHiddenTagsFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
             console.log(checklistBody);
-            const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", checklistBody);
+            const requestedArtifacts = utils.getChecklistFromMarkdown(checklistBody);
             console.log(requestedArtifacts);
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: Boolean(requestedArtifacts.get(m))}));
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts.get(m)}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
             console.log(JSON.stringify(modeSchema));
             return modeSchema
