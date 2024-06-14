@@ -89,7 +89,7 @@ jobs:
             const handlebars = require('handlebars');
             const defaultModes = JSON.parse(DEFAULT_MODES);
             const allModes = JSON.parse(ALL_MODES).map(m => ({name: m, isEnabled: defaultModes.includes(m)}));
-            const handlebarsPayload = {mode: allModes, checklistName: "ARTIFACT_LIST", dropdown: "Artifacts To Upload"};
+            const handlebarsPayload = {item: allModes, checklistName: "ARTIFACT_LIST", dropdown: "Artifacts To Upload"};
             utils.generateMarkdownFromTemplate("./.github/utils/markdown-templates/mode-checklist.hbs", handlebarsPayload, MARKDOWN_PATH, handlebars);
             return MARKDOWN_PATH; // Return the path to the file we wrote for future steps.
 
@@ -164,8 +164,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build,calculate-matrix ]
     steps:
-      - run: echo ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
-      - run: echo ${{ needs.calculate-matrix.outputs.matrix }}
         # We need to check out the repository to load our custom scripts/markdown templates.
       - uses: actions/checkout@v4
 
@@ -185,12 +183,12 @@ jobs:
             const { MARKDOWN_PATH } = process.env
             const script = require('./.github/utils/report-artifacts-to-pull-request.js');
             const handlebars = require('handlebars');
-            let markdown = await script({github, context}, MARKDOWN_PATH, handlebars);
-            return MARKDOWN_PATH; // Return the path to the file we wrote for future steps.
+            await script({github, context}, MARKDOWN_PATH, handlebars);
+            core.setOutput('artifact-report-path', MARKDOWN_PATH) // Return the path to the file we wrote for future steps.
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.result) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.artifact-report-path) != '' }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
         id: findComment
         with:
@@ -199,7 +197,7 @@ jobs:
           body-includes: '<!-- PR_ARTIFACT -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
         # Don't update the comment if we didn't generate any artifacts.
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.result) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.artifact-report-path) != '' }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}

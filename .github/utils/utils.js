@@ -37,37 +37,58 @@ const dateTimeFormat = new Intl.DateTimeFormat('default', {
     }
 
 module.exports = {
-
-    /**
-     * 
-     * @param {*} attributeName 
-     * @param {*} markdownBody 
-     * @returns 
-     */
-    getCustomAttributesFromMarkdown: function(attributeName, markdownBody) {
-        const re = new RegExp(`\\[${attributeName}=(.*?)\\]`,"gi");
-        console.log(re);
-        let matches = markdownBody.matchAll(re);
-        return Array.from(matches, (m) => m[1]);
-    },
     /**
      * 
      * @param {string} checklistName 
      * @param {string} markdownBody 
      * @returns {Map<string, boolean>}
      */
-    getChecklistFromMarkdown: function(checklistName, markdownBody) {
-        const checklistRegex = new RegExp(`<!--\\s*START_${checklistName}\\s*-->(.*)<!--\\s*END_${checklistName}\\s*-->`, "gis");
-        const checklist = Array.from(markdownBody.matchAll(checklistRegex), m=> m[1]);
-        const checklistItemRegex = new RegExp('\\-\\s\\[(.{1})]\\s`([^`]*)`', "gi");
-        const checklistItems = checklist[0].matchAll(checklistItemRegex);
+    getChecklistFromMarkdown: function(markdownBody) {
         /** @type {Map<string, boolean>} */
         let checklistMap = new Map();
+
+        if(markdownBody == null) {
+            return checklistMap;
+        }
+
+        const checklistItemRegex = new RegExp('\\-\\s\\[(.{1})]\\s*(.+)', "gi");
+        const checklistItems = markdownBody.matchAll(checklistItemRegex);
+
         for(const checklistItem of checklistItems) {
-            checklistMap.set(checklistItem[2], checklistItem[1] == "x");
+            checklistMap.set(checklistItem[2].replace(/`/g, ''), checklistItem[1].localeCompare("x", undefined, {sensitivity: "base"}) === 0);
         }
         
         return checklistMap;
+    },
+    getHiddenTagsFromMarkdown: function(tagName, markdownBody) {
+        const openingTagRegex = new RegExp(`^(<!--\\s*START_${tagName}\\s*-->)$\\s`, "gim");
+        const closingTagRegex = new RegExp(`\\s^(<!--\\s*END_${tagName}\\s*-->)$`, "gim");
+
+        let openingIndex = null;
+        let closingIndex = null;
+        
+        for(m of markdownBody.matchAll(openingTagRegex)) {
+            if(openingIndex != null) {
+                return null;
+            }
+
+            openingIndex = m.index + m[0].length;
+        }
+
+        for(m of markdownBody.matchAll(closingTagRegex)) {
+            if(closingIndex != null) {
+                return null;
+            }
+
+            closingIndex = m.index;
+        }
+        
+        if(openingIndex === null || closingIndex === null) {
+            return null;
+        }
+
+        return markdownBody.slice(openingIndex, closingIndex);
+
     },
     /**
      * Generate a markdown file by passing data to a handlebars template.
@@ -81,26 +102,24 @@ module.exports = {
         if(!fs.existsSync(templatePath)) {
             throw new Error(`Template not found at: ${templatePath}`);
         }
-        console.log("TEMPLATE: %s", JSON.stringify(templateData));
+
         // Register our custom handlebars helpers.
         handlebars.registerHelper('pretty-date', humanReadableDate);
         handlebars.registerHelper('pretty-size', humanReadableSize);
 
         /** @type {string?} */
         let renderedResult = null;
-        console.log("template path: %s", templatePath);
+
         const data = fs.readFileSync(templatePath, "utf8");
-        console.log("data %s", data)
+
         const template = handlebars.compile(data);
         renderedResult = template(templateData);
-        console.log(renderedResult)
+
         if(renderedResult != null) {
             if(!fs.existsSync(path.dirname(outputPath))) {
                 fs.mkdirSync(path.dirname(outputPath));
             }
-            console.log(outputPath);
             fs.writeFileSync(outputPath, renderedResult);
-            console.log(`Wrote PR comment body to ${outputPath}.`);
         }
     }
 };

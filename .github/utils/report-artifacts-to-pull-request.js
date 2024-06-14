@@ -21,7 +21,6 @@ module.exports = async ({ github, context }, outputPath, handlebars) => {
     for (const artifact of artifacts) {
         /** @type {Object.<string, *>} */
         let artifactData = {};
-        console.log(artifact.name)
         let artifactNameComponents = artifact.name.split("-");
         artifactData["badgeName"] = "Build-Success"; // Default name to pass to shields.io.
         if (artifactNameComponents.length > 1) {
@@ -31,7 +30,7 @@ module.exports = async ({ github, context }, outputPath, handlebars) => {
             artifactData["badgeName"] = artifactNameComponents.slice(0, 2).join("-");
         }
 
-        artifactData["logsUrl"] = `${context.serverUrl}/${context.repo}/actions/runs/${context.runId}`;
+        artifactData["logsUrl"] = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
         // @ts-ignore
         artifactData["prCommit"] = context.payload.pull_request.head.sha;
         artifactData["mergeCommit"] = context.sha;
