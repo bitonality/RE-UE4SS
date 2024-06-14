@@ -132,7 +132,7 @@ jobs:
             console.log(checklistBody);
             const requestedArtifacts = utils.getChecklistFromMarkdown("ARTIFACT_LIST", checklistBody);
             console.log(requestedArtifacts);
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts.get(m)}));
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: Boolean(requestedArtifacts.get(m))}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
             console.log(JSON.stringify(modeSchema));
             return modeSchema
