@@ -209,7 +209,7 @@ jobs:
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: ${{ steps.generate-markdown.outputs.result }}}
+          body-path: ${{ steps.generate-markdown.outputs.artifact-report-path }}}
           edit-mode: replace
 
          
