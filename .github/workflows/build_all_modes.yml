@@ -1,3 +1,7 @@
+# This workflow automates the build process for all modes of the UE4SS project whenever a pull request is made.
+# It dynamically calculates the build matrix based on the modes defined in the project and manages artifact uploads based on user selections in PR comments.
+
+
 name: Build All Modes
 permissions:
     contents: write
@@ -129,13 +133,13 @@ jobs:
             const { ALL_MODES, REQUESTED_ARTIFACTS_COMMENT } = process.env;
             const utils = require("./.github/utils/utils.js");
             const checklistBody = utils.getHiddenTagsFromMarkdown("ARTIFACT_LIST", REQUESTED_ARTIFACTS_COMMENT);
-            console.log(checklistBody);
             const requestedArtifacts = utils.getChecklistFromMarkdown(checklistBody);
-            console.log(requestedArtifacts);
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts.get(m)}));
+            if(requestedArtifacts.size == 0) {
+              core.warning("Unable to determine requested artifacts. No artifacts will be uploaded for this run.")
+            }
+
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedArtifacts.has(m) ? requestedArtifacts.get(m) : false}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
-            console.log(JSON.stringify(modeSchema));
-            return modeSchema
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
   build:
@@ -191,7 +195,7 @@ jobs:
 
       # Update the existing PR artifact report comment if it already exists.
       - name: Find possible previous comment
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.artifact-report-path) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e
         id: findComment
         with:
@@ -200,12 +204,12 @@ jobs:
           body-includes: '<!-- PR_ARTIFACT -->' # Hidden comment acts as an indicator that we've already commented on this PR. 
       - name: Update comment
         # Don't update the comment if we didn't generate any artifacts.
-        if: ${{ startsWith(github.ref, 'refs/pull/') && hashFiles(steps.generate-markdown.outputs.artifact-report-path) != '' }}
+        if: ${{ startsWith(github.ref, 'refs/pull/') }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
         with:
           comment-id: ${{ steps.findComment.outputs.comment-id }}
           issue-number: ${{ github.event.number }}
-          body-path: ${{steps.generate-markdown.outputs.result}}}
+          body-path: ${{ steps.generate-markdown.outputs.result }}}
           edit-mode: replace
 
          

@@ -6,6 +6,50 @@ const handlebars = require('handlebars')
 jest.mock('fs');
 jest.mock('handlebars');
 
+
+
+describe('humanReadableSize', () => {
+    test('converts 0 bytes to "0 Bytes"', () => {
+        expect(utils.humanReadableSize(0)).toBe('0 Bytes');
+    });
+
+    test('converts bytes to kilobytes', () => {
+        expect(utils.humanReadableSize(1024)).toBe('1 KB');
+        expect(utils.humanReadableSize(1536)).toBe('1.5 KB');
+    });
+
+    test('converts bytes to megabytes', () => {
+        expect(utils.humanReadableSize(1048576)).toBe('1 MB');
+        expect(utils.humanReadableSize(1572864)).toBe('1.5 MB');
+    });
+
+    test('converts bytes to gigabytes', () => {
+        expect(utils.humanReadableSize(1073741824)).toBe('1 GB');
+        expect(utils.humanReadableSize(1610612736)).toBe('1.5 GB');
+    });
+
+    test('converts bytes to terabytes', () => {
+        expect(utils.humanReadableSize(1099511627776)).toBe('1 TB');
+        expect(utils.humanReadableSize(1649267441664)).toBe('1.5 TB');
+    });
+
+    test('handles large numbers', () => {
+        expect(utils.humanReadableSize(1e15)).toBe('909.49 TB');
+        expect(utils.humanReadableSize(1.2e15)).toBe('1.07 PB');
+    });
+
+    test('handles decimals with trailing zeros', () => {
+        expect(utils.humanReadableSize(1024)).toBe('1 KB');
+        expect(utils.humanReadableSize(1536)).toBe('1.5 KB');
+        expect(utils.humanReadableSize(1048576)).toBe('1 MB');
+    });
+
+    test('handles decimals with all zeros', () => {
+        expect(utils.humanReadableSize(1024)).toBe('1 KB');
+        expect(utils.humanReadableSize(1048576)).toBe('1 MB');
+    });
+});
+
 describe('getChecklistFromMarkdown', () => {
     test('returns an empty map if markdownBody is null', () => {
         const result = utils.getChecklistFromMarkdown(null);
@@ -254,8 +298,6 @@ FOO
 `, expected: `
 FOO`},
     ])('Parse Tags With Inner Newlines: %#', ({ body, expected }) => {
-        console.log(body)
-        console.log(expected)
         test('Assert Matches', () => { expect(utils.getHiddenTagsFromMarkdown("TEST", body)).toEqual(expected); });
     });
 });
