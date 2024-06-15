@@ -9,7 +9,7 @@
                 "file": 2
             },
             {
-                "regexp": "^jq:\\sparse\\serror:\\s(.*)\\sat\\sline\\s(\\d*),\\scolumn\\s(\\d*)$",
+                "regexp": "^parse\\serror:\\s(.*)\\sat\\sline\\s(\\d*),\\scolumn\\s(\\d*)$",
                 "message": 1,
                 "line": 2,
                 "column": 3,
