@@ -25,6 +25,6 @@ jobs:
           echo "::add-matcher::.github/problem-matchers/jsonlint-matcher.json"
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file"
-            jq . "$file" 1> /dev/null
+            jq . "$file" 2>&1
           done
 
