@@ -1,0 +1,21 @@
+{
+    "problemMatcher": [
+      {
+        "owner": "jsonlint",
+        "pattern": [
+            {
+                "regexp": "^(.*[\\/\\\\])?([.\\w\\-_]*)$",
+                "fromPath": 1,
+                "file": 2
+            },
+            {
+                "regexp": "^jq:\\sparse\\serror:\\s(.*)\\sat\\sline\\s(\\d*),\\scolumn\\s(\\d*)$",
+                "message": 1,
+                "line": 2,
+                "column": 3,
+                "loop": true
+            }
+        ]
+      }
+    ]
+  }
