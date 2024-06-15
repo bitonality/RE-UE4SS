@@ -1,0 +1,36 @@
+name: Validate JSON Files
+run-name: Validate JSON files - ${{ github.ref }} - @${{ github.actor }}
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - "**.json"
+  push:
+    branches: ['main']
+    paths:
+      - "**.json"
+jobs:
+  jsonlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Repository
+        uses: actions/checkout@v4
+      - name: Get all changed JSON files
+        id: changed-json-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+             **.json
+      - name: Lint all changed JSON files
+        if: steps.changed-json-files.outputs.any_changed == 'true'
+        shell: bash
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-json-files.outputs.all_changed_files }}
+        run: |
+          echo "::add-matcher::.github/problem-matchers/jsonlint-matcher.json"
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file"
+            jq 'empty' "$file" 2>&1
+          done
+          echo "::remove-matcher owner=jsonlint::"
+

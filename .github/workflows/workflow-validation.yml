@@ -1,0 +1,34 @@
+name: Validate GitHub Workflow Files
+run-name: Validate workflow files - ${{ github.ref }} - @${{ github.actor }}
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - ".github/**"
+  push:
+    branches: ['main']
+    paths:
+      - ".github/**"
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get all changed workflow files
+        id: changed-workflow-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+             **.yml
+      - name: Check workflow files
+        if: steps.changed-workflow-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-workflow-files.outputs.all_changed_files }}
+        run: |
+          echo "::add-matcher::.github/problem-matchers/actionlint-matcher.json"
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          for file in ${ALL_CHANGED_FILES}; do
+            ./actionlint -color $file
+          done
+          echo "::remove-matcher owner=actionlint::"
+        shell: bash
