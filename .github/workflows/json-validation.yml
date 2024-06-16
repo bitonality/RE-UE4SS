@@ -27,4 +27,5 @@ jobs:
             echo "$file"
             jq 'empty' "$file" 2>&1
           done
+          echo "::remove-matcher owner=jsonlint::"
 
