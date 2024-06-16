@@ -1,9 +1,11 @@
 name: Validate JSON Files
+run-name: Validate JSON files - ${{ github.ref }} - @${{ github.actor }}
 on:
   pull_request:
     paths:
       - "**.json"
   push:
+    branches: ['main']
 jobs:
   jsonlint:
     runs-on: ubuntu-latest
