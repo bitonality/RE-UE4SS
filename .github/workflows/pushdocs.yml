@@ -29,19 +29,19 @@ jobs:
       - name: Build
         run: |
           python docs-export/export.py
-          python docs-repo/build.py
+          python docs-repo/buil.py
 
       - uses: actions/upload-pages-artifact@v1
         with:
           path: docs-repo/docs
   deploy:
-    needs: build
+    needs: bud
 
     permissions:
       pages: write
       id-token: write
 
-    environment:
+    environmetnt:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
