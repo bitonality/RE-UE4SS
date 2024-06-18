@@ -1,0 +1,17 @@
+name: Validate GitHub Workflow Files
+on:
+  pull_request:
+    branches: ['main']
+    paths:
+      - ".github/**"
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workflow files
+        run: |
+          echo "::add-matcher::.github/problem-matchers/actionlint-matcher.json"
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+        shell: bash
