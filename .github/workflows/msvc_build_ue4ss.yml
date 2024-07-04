@@ -100,11 +100,7 @@ jobs:
         id: calc-files-artifact
         shell: pwsh
         run: >
-          $files_to_upload = xmake ci --dump=targets | jq --argjson config '${{inputs.artifact-list}}' '. as $in
-            | $config[]
-            | $in[.]
-            | .[]
-          ' 
+          $files_to_upload = (xmake ci --dump=targets) | jq --argjson config '${{inputs.artifact-list}}' '. as $in | $config[] | $in[.] | .[]' 
 
           $artifact_dir = "${{runner.temp}}/ue4ss_artifacts/"
 
