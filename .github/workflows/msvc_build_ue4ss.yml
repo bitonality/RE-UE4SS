@@ -98,11 +98,11 @@ jobs:
 
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
-        shell: powershell
+        shell: pwsh
         run: >
           $targets = ((xmake ci --dump=targets) | ConvertFrom-Json -AsHashtable)
 
-          $artifacts = ('${{inputs.artifact-list}}' | ConvertFrom-Json -AsHashtable)
+          $artifacts = (${{inputs.artifact-list}}' | ConvertFrom-Json -AsHashtable)
 
           $files_to_upload = @()
 
