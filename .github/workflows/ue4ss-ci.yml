@@ -98,9 +98,11 @@ jobs:
       artifact-retention-days: 14
   
   report-artifacts:
-    name: "Report Artifacts"
     if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
     needs: [calculate-matrix, build]
-    uses: bitonality/PRtifact@v0.1.0
-    with:
-      comment-mode: 'CreateOrUpdate'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Report Artifacts"
+        uses: bitonality/PRtifact@v0.1.0
+        with:
+          comment-mode: 'CreateOrUpdate'
