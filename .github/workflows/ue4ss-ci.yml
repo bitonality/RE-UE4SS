@@ -94,7 +94,7 @@ jobs:
       # The supplied format should be compatible with the output of `xmake ci --dump=targets`.
       # This specifies that the `UE4SS` target should upload its target file and symbol file.
       # Ex. UE4SS.dll + UE4SS.pdb
-      artifact-list: '{"UE4SS": ["target", "symbol"]}'
+      artifact-list: '["UE4SS"]'
       artifact-retention-days: 14
   
   report-artifacts:

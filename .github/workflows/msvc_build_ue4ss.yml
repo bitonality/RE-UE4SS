@@ -19,7 +19,7 @@ on:
       artifact-list:
         description: 'Artifaction'
         type: string
-        default: '{"UE4SS": ["target", "symbol"]}'
+        default: '["UE4SS"]'
       artifact-retention-days:
         description: 'How many days to retain artifacts'
         type: number
@@ -107,7 +107,7 @@ jobs:
           ' 
 
           $artifact_dir = "${{runner.temp}}/ue4ss_artifacts/"
-          
+
           New-Item -Path $artifact_dir -ItemType Directory -Force
 
           foreach ($file in $files_to_upload) {
