@@ -99,12 +99,10 @@ jobs:
       - name: Calculate Files For Artifact Inclusion
         id: calc-files-artifact
         shell: pwsh
-        run: >
+        run: |
           $files_to_upload = (xmake ci --dump=targets) | jq --argjson config '${{inputs.artifact-list}}' '. as $in | $config[] | $in[.] | .[]' 
 
-          $artifact_dir = '${{runner.temp}}/ue4ss_artifacts/'
-
-          New-Item -Path $artifact_dir -ItemType Directory -Force
+          $artifact_dir = New-Item -Path '${{runner.temp}}/ue4ss_artifacts/' -ItemType Directory -Force
 
           foreach ($file in $files_to_upload) {
             Write-Host $file; Copy-Item $file -Destination $artifact_dir
