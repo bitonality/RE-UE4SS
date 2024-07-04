@@ -96,3 +96,11 @@ jobs:
       # Ex. UE4SS.dll + UE4SS.pdb
       artifact-list: '{"UE4SS": ["target", "symbol"]}'
       artifact-retention-days: 14
+  
+  report-artifacts:
+    name: "Report Artifacts"
+    if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
+    needs: [calculate-matrix, build]
+    uses: bitonality/PRtifact@v0.1.0
+    with:
+      comment-mode: 'CreateOrUpdate'

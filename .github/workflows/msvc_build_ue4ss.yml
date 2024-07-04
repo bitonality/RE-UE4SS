@@ -100,22 +100,15 @@ jobs:
         id: calc-files-artifact
         shell: pwsh
         run: >
-          $targets = ((xmake ci --dump=targets) | ConvertFrom-Json -AsHashtable)
-
-          $artifacts = ('${{inputs.artifact-list}}' | ConvertFrom-Json -AsHashtable)
-
-          $files_to_upload = @()
-
-          foreach($i in $artifacts) {
-            foreach($kvp in $i.GetEnumerator()) {
-              $files_to_upload += ($targets[$kvp.Name][$kvp.Value])
-            }
-          }
+          $files_to_upload = xmake ci --dump=targets | jq --argjson config '${{inputs.artifact-list}}' '. as $in
+            | $config[]
+            | $in[.]
+            | .[]
+          ' 
 
           $artifact_dir = "${{runner.temp}}/ue4ss_artifacts/"
-
           New-Item -Path $artifact_dir -ItemType Directory -Force
-          
+
           foreach ($file in $files_to_upload) {
             Copy-Item "$file" -Destination "$artifact_dir"
           }
