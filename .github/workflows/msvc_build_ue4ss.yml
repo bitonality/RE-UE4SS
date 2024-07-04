@@ -107,7 +107,7 @@ jobs:
           New-Item -Path $artifact_dir -ItemType Directory -Force
 
           foreach ($file in $files_to_upload) {
-            Copy-Item "$file" -Destination "$artifact_dir"
+            Copy-Item "$file" -Destination $artifact_dir
           }
           
           echo "artifact_dir=$artifact_dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
