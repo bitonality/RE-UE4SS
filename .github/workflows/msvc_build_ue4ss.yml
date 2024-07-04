@@ -100,9 +100,9 @@ jobs:
         id: calc-files-artifact
         shell: pwsh
         run: >
-          $targets = ((xmake ci --dump=targets) | ConvertFrom-Json -AsHashtable)
+          $targets = ('$(xmake ci --dump=targets)' | ConvertFrom-Json -AsHashtable)
 
-          $artifacts = (${{inputs.artifact-list}}' | ConvertFrom-Json -AsHashtable)
+          $artifacts = ('${{inputs.artifact-list}}' | ConvertFrom-Json -AsHashtable)
 
           $files_to_upload = @()
 
