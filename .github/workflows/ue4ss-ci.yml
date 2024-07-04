@@ -70,8 +70,8 @@ jobs:
           retries: 3 # Retry in case REST requests fail transitively.
           script: |
             const { ALL_MODES, REQUESTED_MODES } = process.env;
-            
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: REQUESTED_MODES.has(m) ? REQUESTED_MODES.get(m) : false}));
+            const requestedModes = JSON.parse(REQUESTED_MODES)
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedModes.has(m) ? requestedModes.get(m) : false}));
             core.setOutput('matrix', JSON.stringify(modeSchema));
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
