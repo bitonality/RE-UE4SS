@@ -7,12 +7,6 @@ permissions:
     pull-requests: write # For adding comments to PR.
 on:
   pull_request:
-    branches:
-        - 'main'
-    paths-ignore:
-        - 'README.md'
-        - 'docs/**'
-        - 'docs-export/**'
 
 # Ensure that rapid pushes to the pull request branch don't trigger this workflow multiple times.
 # We only care about executing this workflow for that 'latest' commit on a PR.
