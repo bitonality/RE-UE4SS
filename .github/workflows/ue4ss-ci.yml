@@ -84,7 +84,7 @@ jobs:
         # Use our generated matrix to populate the `include` array.
         include: ${{ fromJSON(needs.calculate-matrix.outputs.matrix) }}
     # Run our reusable workflow for each mode in our matrix.
-    uses: ./.github/msvc_build_ue4ss.yml
+    uses: ./.github/workflows/msvc_build_ue4ss.yml
     secrets: inherit # Inherit secrets from this workflow to safely pass `secrets.UE4SS_PAT` to our reusable workflow.
     with:
       build-mode: ${{ matrix.mode }}
