@@ -29,6 +29,12 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # Clone the submodule so we can query xmake on the entire project.
+          token: ${{ secrets.UEPSEUDO_PAT }}
+          ref: ${{inputs.commit-sha}}
         # Store the current week (00-53) to use as part of the xmake cache key.
         # This saves us from having to detect older caches and delete them.
       - name: Get current week as package key
