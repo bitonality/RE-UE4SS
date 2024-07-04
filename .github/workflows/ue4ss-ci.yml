@@ -71,7 +71,7 @@ jobs:
           script: |
             const { ALL_MODES, REQUESTED_MODES } = process.env;
             const requestedModes = JSON.parse(REQUESTED_MODES)
-            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedModes.has(m) ? requestedModes.get(m) : false}));
+            const modeSchema = JSON.parse(ALL_MODES).map(m => ({mode: m, artifact: requestedModes.includes(m) }));
             core.setOutput('matrix', JSON.stringify(modeSchema));
 
   # Build UE4SS for each mode we received from the `calculate_matrix` job.
