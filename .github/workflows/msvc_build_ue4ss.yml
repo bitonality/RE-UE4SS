@@ -114,6 +114,8 @@ jobs:
 
           $artifact_dir = "${{runner.temp}}/ue4ss_artifacts/"
 
+          New-Item -Path $artifact_dir -ItemType Directory -Force
+          
           foreach ($file in $files_to_upload) {
             Copy-Item "$file" -Destination "$artifact_dir"
           }
